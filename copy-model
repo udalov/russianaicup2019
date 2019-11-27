@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -e
+
+st=$(git status -suno src)
+if [[ -n $st ]];
+then
+    echo "There are untracked changes in git, aborting"
+    exit 1
+fi
+
+mkdir -p src/model
+cp raic-2019/clients/cpp/{Debug.*,Stream.*,TcpStream.*,main.cpp} src/
+cp raic-2019/clients/cpp/model/{*.cpp,*.hpp} src/model/
