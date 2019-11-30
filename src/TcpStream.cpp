@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 #ifdef _WIN32
 typedef int RECV_SEND_T;
@@ -17,27 +18,33 @@ TcpStream::TcpStream(const std::string &host, int port) {
     throw std::runtime_error("Failed to initialize sockets");
   }
 #endif
-  sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock == -1) {
-    throw std::runtime_error("Failed to create socket");
+  int attempt = 0;
+  while (++attempt < 50) {
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == -1) {
+      throw std::runtime_error("Failed to create socket");
+    }
+    int yes = 1;
+    if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&yes, sizeof(int)) <
+        0) {
+      throw std::runtime_error("Failed to set TCP_NODELAY");
+    }
+    addrinfo hints, *servinfo;
+    std::memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    if (getaddrinfo(host.c_str(), std::to_string(port).c_str(), &hints,
+                    &servinfo) != 0) {
+      throw std::runtime_error("Failed to get addr info");
+    }
+    if (connect(sock, servinfo->ai_addr, servinfo->ai_addrlen) != -1) {
+      freeaddrinfo(servinfo);
+      return;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    freeaddrinfo(servinfo);
   }
-  int yes = 1;
-  if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&yes, sizeof(int)) <
-      0) {
-    throw std::runtime_error("Failed to set TCP_NODELAY");
-  }
-  addrinfo hints, *servinfo;
-  std::memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_STREAM;
-  if (getaddrinfo(host.c_str(), std::to_string(port).c_str(), &hints,
-                  &servinfo) != 0) {
-    throw std::runtime_error("Failed to get addr info");
-  }
-  if (connect(sock, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
-    throw std::runtime_error("Failed to connect");
-  }
-  freeaddrinfo(servinfo);
+  throw std::runtime_error("Failed to connect after 50 attempts");
 }
 
 class TcpInputStream : public InputStream {
