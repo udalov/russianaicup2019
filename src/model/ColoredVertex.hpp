@@ -4,16 +4,15 @@
 #include "../Stream.hpp"
 #include <string>
 #include <stdexcept>
-#include "Vec2D.h"
 #include "ColorFloat.hpp"
+#include "Vec2D.h"
 
 class ColoredVertex {
 public:
-    Vec2Float position;
+    Vec2Double position;
     ColorFloat color;
     ColoredVertex();
-    ColoredVertex(Vec2Float position, ColorFloat color);
-    static ColoredVertex readFrom(InputStream& stream);
+    ColoredVertex(Vec2Double position, ColorFloat color);
     void writeTo(OutputStream& stream) const;
     std::string toString() const;
 };

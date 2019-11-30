@@ -5,7 +5,8 @@ PlayerMessageGame::CustomDataMessage::CustomDataMessage() { }
 PlayerMessageGame::CustomDataMessage::CustomDataMessage(std::shared_ptr<CustomData> data) : data(data) { }
 PlayerMessageGame::CustomDataMessage PlayerMessageGame::CustomDataMessage::readFrom(InputStream& stream) {
     PlayerMessageGame::CustomDataMessage result;
-    result.data = CustomData::readFrom(stream);
+    // Unsupported
+    // result.data = CustomData::readFrom(stream);
     return result;
 }
 void PlayerMessageGame::CustomDataMessage::writeTo(OutputStream& stream) const {

@@ -18,7 +18,6 @@ public:
     class Polygon;
     class PlacedText;
 
-    static std::shared_ptr<CustomData> readFrom(InputStream& stream);
     virtual void writeTo(OutputStream& stream) const = 0;
     virtual std::string toString() const = 0;
 };
@@ -30,7 +29,6 @@ public:
     std::string text;
     Log();
     Log(std::string text);
-    static Log readFrom(InputStream& stream);
     void writeTo(OutputStream& stream) const;
     std::string toString() const override;
 };
@@ -39,12 +37,11 @@ class CustomData::Rect : public CustomData {
 public:
     static const int TAG = 1;
 public:
-    Vec2Float pos;
-    Vec2Float size;
+    Vec2Double pos;
+    Vec2Double size;
     ColorFloat color;
     Rect();
-    Rect(Vec2Float pos, Vec2Float size, ColorFloat color);
-    static Rect readFrom(InputStream& stream);
+    Rect(Vec2Double pos, Vec2Double size, ColorFloat color);
     void writeTo(OutputStream& stream) const;
     std::string toString() const override;
 };
@@ -53,13 +50,12 @@ class CustomData::Line : public CustomData {
 public:
     static const int TAG = 2;
 public:
-    Vec2Float p1;
-    Vec2Float p2;
+    Vec2Double p1;
+    Vec2Double p2;
     float width;
     ColorFloat color;
     Line();
-    Line(Vec2Float p1, Vec2Float p2, float width, ColorFloat color);
-    static Line readFrom(InputStream& stream);
+    Line(Vec2Double p1, Vec2Double p2, float width, ColorFloat color);
     void writeTo(OutputStream& stream) const;
     std::string toString() const override;
 };
@@ -71,7 +67,6 @@ public:
     std::vector<ColoredVertex> vertices;
     Polygon();
     Polygon(std::vector<ColoredVertex> vertices);
-    static Polygon readFrom(InputStream& stream);
     void writeTo(OutputStream& stream) const;
     std::string toString() const override;
 };
@@ -81,13 +76,12 @@ public:
     static const int TAG = 4;
 public:
     std::string text;
-    Vec2Float pos;
+    Vec2Double pos;
     TextAlignment alignment;
     float size;
     ColorFloat color;
     PlacedText();
-    PlacedText(std::string text, Vec2Float pos, TextAlignment alignment, float size, ColorFloat color);
-    static PlacedText readFrom(InputStream& stream);
+    PlacedText(std::string text, Vec2Double pos, TextAlignment alignment, float size, ColorFloat color);
     void writeTo(OutputStream& stream) const;
     std::string toString() const override;
 };

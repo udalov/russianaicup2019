@@ -41,6 +41,10 @@ template<typename T> struct Vec2D {
         stream.write(x);
         stream.write(y);
     }
+    void writeFloatTo(OutputStream& stream) const {
+        stream.write((float) x);
+        stream.write((float) y);
+    }
     std::string toString() const {
         std::ostringstream out;
         out.precision(3);
@@ -50,6 +54,4 @@ template<typename T> struct Vec2D {
 };
 
 typedef Vec2D<double> Vec2Double;
-typedef Vec2D<float> Vec2Float;
-
 typedef Vec2Double Vec;

@@ -6,37 +6,34 @@ using namespace std;
 
 MyStrategy::MyStrategy() {}
 
-double distanceSqr(Vec a, Vec b) {
-    return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
-}
-
-UnitAction MyStrategy::getAction(const Unit &unit, const Game &game, Debug &debug) {
-    auto nearestEnemy = minBy(game.units, [&unit](auto& other) {
-        return other.playerId != unit.playerId ? distanceSqr(unit.position, other.position) : 1e100;
+UnitAction MyStrategy::getAction(const Unit &me, const Game &game, Debug &debug) {
+    auto nearestEnemy = minBy(game.units, [&me](auto& other) {
+        return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
     });
-    auto nearestWeapon = minBy(game.lootBoxes, [&unit](auto& lootBox) {
-        return dynamic_pointer_cast<Item::Weapon>(lootBox.item) ? distanceSqr(unit.position, lootBox.position) : 1e100;
+    auto nearestWeapon = minBy(game.lootBoxes, [&me](auto& lootBox) {
+        return dynamic_pointer_cast<Item::Weapon>(lootBox.item) ? me.position.sqrDist(lootBox.position) : 1e100;
     });
-    Vec targetPos = unit.position;
-    if (unit.weapon == nullptr && nearestWeapon != nullptr) {
-        targetPos = nearestWeapon->position;
+    Vec target = me.position;
+    if (me.weapon == nullptr && nearestWeapon != nullptr) {
+        target = nearestWeapon->position;
     } else if (nearestEnemy != nullptr) {
-        targetPos = nearestEnemy->position;
+        target = nearestEnemy->position;
     }
-    debug.draw(CustomData::Log(string("Target pos: ") + targetPos.toString()));
+    debug.draw(CustomData::Log(string("Me: ") + me.position.toString()));
+    debug.draw(CustomData::Log(string("Target: ") + target.toString()));
     Vec aim;
     if (nearestEnemy != nullptr) {
-        aim = Vec(nearestEnemy->position.x - unit.position.x, nearestEnemy->position.y - unit.position.y);
+        aim = Vec(nearestEnemy->position.x - me.position.x, nearestEnemy->position.y - me.position.y);
     }
-    bool jump = targetPos.y > unit.position.y;
-    if (targetPos.x > unit.position.x && game.level.tiles[unit.position.x + 1][unit.position.y] == Tile::WALL) {
+    bool jump = target.y > me.position.y;
+    if (target.x > me.position.x && game.level.tiles[me.position.x + 1][me.position.y] == Tile::WALL) {
         jump = true;
     }
-    if (targetPos.x < unit.position.x && game.level.tiles[unit.position.x - 1][unit.position.y] == Tile::WALL) {
+    if (target.x < me.position.x && game.level.tiles[me.position.x - 1][me.position.y] == Tile::WALL) {
         jump = true;
     }
     UnitAction action;
-    action.velocity = targetPos.x - unit.position.x;
+    action.velocity = target.x - me.position.x;
     action.jump = jump;
     action.jumpDown = !action.jump;
     action.aim = aim;
