@@ -4,7 +4,7 @@
 #include "../Stream.hpp"
 #include <string>
 #include <stdexcept>
-#include "Vec2Double.hpp"
+#include "Vec2D.h"
 
 class UnitAction {
 public:

@@ -2,11 +2,10 @@
 #define _MODEL_WEAPON_PARAMS_HPP_
 
 #include "../Stream.hpp"
+#include <memory>
 #include <string>
 #include <stdexcept>
 #include "BulletParams.hpp"
-#include <memory>
-#include <stdexcept>
 #include "ExplosionParams.hpp"
 
 class WeaponParams {

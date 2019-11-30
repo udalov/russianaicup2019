@@ -2,19 +2,13 @@
 #define _MODEL_WEAPON_HPP_
 
 #include "../Stream.hpp"
+#include <memory>
 #include <string>
 #include <stdexcept>
 #include "WeaponType.hpp"
-#include <stdexcept>
 #include "WeaponParams.hpp"
-#include <stdexcept>
 #include "BulletParams.hpp"
-#include <memory>
-#include <stdexcept>
 #include "ExplosionParams.hpp"
-#include <memory>
-#include <memory>
-#include <memory>
 
 class Weapon {
 public:

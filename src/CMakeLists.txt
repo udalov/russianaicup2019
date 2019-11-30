@@ -11,7 +11,7 @@ if(WIN32)
     set(PROJECT_LIBS Ws2_32.lib)
 endif()
 
-file(GLOB HEADERS "*.hpp" "model/*.hpp" "csimplesocket/*.h")
+file(GLOB HEADERS "*.h" "*.hpp" "model/*.h" "model/*.hpp" "csimplesocket/*.h")
 set_source_files_properties(${HEADERS} PROPERTIES HEADER_FILE_ONLY TRUE)
 file(GLOB SRC "*.cpp" "model/*.cpp" "csimplesocket/*.cpp")
 add_executable(aicup2019 ${HEADERS} ${SRC})

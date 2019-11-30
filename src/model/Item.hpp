@@ -5,7 +5,6 @@
 #include <memory>
 #include <string>
 #include <stdexcept>
-#include <stdexcept>
 #include "WeaponType.hpp"
 
 class Item {

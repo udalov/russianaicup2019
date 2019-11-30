@@ -4,8 +4,7 @@
 #include "../Stream.hpp"
 #include <string>
 #include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
+#include "Vec2D.h"
 #include "ColorFloat.hpp"
 
 class ColoredVertex {

@@ -2,16 +2,12 @@
 #define _MODEL_BULLET_HPP_
 
 #include "../Stream.hpp"
+#include <memory>
 #include <string>
 #include <stdexcept>
 #include "WeaponType.hpp"
-#include <stdexcept>
-#include "Vec2Double.hpp"
-#include <stdexcept>
-#include "Vec2Double.hpp"
-#include <memory>
-#include <stdexcept>
 #include "ExplosionParams.hpp"
+#include "Vec2D.h"
 
 class Bullet {
 public:

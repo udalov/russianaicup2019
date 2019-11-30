@@ -5,8 +5,6 @@
 #include <functional>
 #include <vector>
 
-typedef Vec2Double Vec;
-
 template<typename T> const T *minBy(const std::vector<T>& v, const std::function<double(const T&)>& f) {
     auto best = 1e100;
     const T *ans = nullptr;

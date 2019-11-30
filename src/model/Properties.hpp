@@ -2,25 +2,15 @@
 #define _MODEL_PROPERTIES_HPP_
 
 #include "../Stream.hpp"
+#include <memory>
 #include <string>
 #include <stdexcept>
-#include "Vec2Double.hpp"
-#include <stdexcept>
-#include "Vec2Double.hpp"
 #include <unordered_map>
-#include <stdexcept>
 #include "WeaponType.hpp"
-#include <stdexcept>
 #include "WeaponParams.hpp"
-#include <stdexcept>
 #include "BulletParams.hpp"
-#include <memory>
-#include <stdexcept>
 #include "ExplosionParams.hpp"
-#include <stdexcept>
-#include "Vec2Double.hpp"
-#include <stdexcept>
-#include "ExplosionParams.hpp"
+#include "Vec2D.h"
 
 class Properties {
 public:

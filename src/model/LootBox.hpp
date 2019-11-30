@@ -4,13 +4,9 @@
 #include "../Stream.hpp"
 #include <string>
 #include <stdexcept>
-#include "Vec2Double.hpp"
-#include <stdexcept>
-#include "Vec2Double.hpp"
-#include <stdexcept>
 #include "Item.hpp"
-#include <stdexcept>
 #include "WeaponType.hpp"
+#include "Vec2D.h"
 
 class LootBox {
 public:

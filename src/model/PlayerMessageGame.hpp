@@ -5,38 +5,13 @@
 #include <memory>
 #include <string>
 #include <stdexcept>
-#include <stdexcept>
-#include "CustomData.hpp"
-#include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
-#include "ColorFloat.hpp"
-#include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
-#include "ColorFloat.hpp"
-#include <vector>
-#include <stdexcept>
-#include "ColoredVertex.hpp"
-#include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
-#include "ColorFloat.hpp"
-#include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
-#include "TextAlignment.hpp"
-#include <stdexcept>
-#include "ColorFloat.hpp"
 #include <unordered_map>
-#include <stdexcept>
+#include <vector>
+#include "CustomData.hpp"
+#include "ColorFloat.hpp"
+#include "ColoredVertex.hpp"
+#include "TextAlignment.hpp"
 #include "UnitAction.hpp"
-#include <stdexcept>
-#include "Vec2Double.hpp"
 
 class PlayerMessageGame {
 public:

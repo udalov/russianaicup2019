@@ -5,31 +5,10 @@
 #include <memory>
 #include <string>
 #include <stdexcept>
-#include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
-#include "ColorFloat.hpp"
-#include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
-#include "ColorFloat.hpp"
 #include <vector>
-#include <stdexcept>
+#include "ColorFloat.hpp"
 #include "ColoredVertex.hpp"
-#include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
-#include "ColorFloat.hpp"
-#include <stdexcept>
-#include "Vec2Float.hpp"
-#include <stdexcept>
 #include "TextAlignment.hpp"
-#include <stdexcept>
-#include "ColorFloat.hpp"
 
 class CustomData {
 public:

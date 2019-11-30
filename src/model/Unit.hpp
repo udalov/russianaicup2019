@@ -2,28 +2,16 @@
 #define _MODEL_UNIT_HPP_
 
 #include "../Stream.hpp"
+#include <memory>
 #include <string>
 #include <stdexcept>
-#include "Vec2Double.hpp"
-#include <stdexcept>
-#include "Vec2Double.hpp"
-#include <stdexcept>
 #include "JumpState.hpp"
-#include <memory>
-#include <stdexcept>
 #include "Weapon.hpp"
-#include <stdexcept>
 #include "WeaponType.hpp"
-#include <stdexcept>
 #include "WeaponParams.hpp"
-#include <stdexcept>
 #include "BulletParams.hpp"
-#include <memory>
-#include <stdexcept>
 #include "ExplosionParams.hpp"
-#include <memory>
-#include <memory>
-#include <memory>
+#include "Vec2D.h"
 
 class Unit {
 public:
