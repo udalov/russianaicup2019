@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cmath>
-#include <sstream>
 #include <string>
 #include "../Stream.hpp"
+#include "modelUtil.h"
 
 constexpr inline double sqr(double x) { return x * x; }
 
@@ -16,10 +16,12 @@ template<typename T> struct Vec2D {
     constexpr Vec2D operator+(const Vec2D& other) const { return Vec2D(x + other.x, y + other.y); }
     constexpr Vec2D operator-(const Vec2D& other) const { return Vec2D(x - other.x, y - other.y); }
     constexpr Vec2D operator*(T coeff) const { return Vec2D(x * coeff, y * coeff); }
+    constexpr Vec2D operator/(T coeff) const { return Vec2D(x / coeff, y / coeff); }
 
     constexpr void operator+=(const Vec2D& other) { x += other.x; y += other.y; }
     constexpr void operator-=(const Vec2D& other) { x -= other.x; y -= other.y; }
     constexpr void operator*=(T coeff) { x *= coeff; y *= coeff; }
+    constexpr void operator/=(T coeff) { x /= coeff; y /= coeff; }
 
     Vec2D normalize() const { return *this * (1 / len()); }
 
@@ -46,10 +48,7 @@ template<typename T> struct Vec2D {
         stream.write((float) y);
     }
     std::string toString() const {
-        std::ostringstream out;
-        out.precision(3);
-        out << std::fixed << "(" << x << ", " << y << ")";
-        return out.str();
+        return std::string("(") + ::toString(x) + ", " + ::toString(y) + ")";
     }
 };
 

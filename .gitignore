@@ -2,3 +2,5 @@
 /raic-2019
 /assets
 out
+.idea
+cmake-build-debug

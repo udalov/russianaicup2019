@@ -3,9 +3,12 @@
 set -e
 trap "kill 0" EXIT
 
-scripts/create-config.py Local Quick >out/config.json
+# NOVIS=--batch-mode
+
+make -Cout -j4
+scripts/create-config.py Local Empty levels/level.txt >out/config.json
 out/aicup2019 &
-./aicup2019 --log-level ERROR --config out/config.json --save-results out/result.txt
+./aicup2019 $NOVIS --log-level ERROR --config out/config.json --save-results out/result.txt
 test -s out/result.txt && scripts/parse-result.py
 
 wait

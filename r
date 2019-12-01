@@ -3,7 +3,7 @@
 set -e
 trap "kill 0" EXIT
 
-scripts/create-config.py Local Quick >out/config.json
+scripts/create-config.py Local Quick Simple >out/config.json
 score1=0
 score2=0
 for i in `seq 1 20`
