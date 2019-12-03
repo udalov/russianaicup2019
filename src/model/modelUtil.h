@@ -5,7 +5,7 @@
 
 inline std::string toString(double x) {
     std::ostringstream out;
-    out.precision(9);
+    out.precision(6);
     out << std::fixed << x;
     return out.str();
 }
