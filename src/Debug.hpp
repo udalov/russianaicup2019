@@ -3,19 +3,18 @@
 
 #include "Stream.hpp"
 #include "model/CustomData.hpp"
-#include <memory>
 #include <string>
 
 class Debug {
 public:
-  Debug(const std::shared_ptr<OutputStream> &outputStream);
+  Debug(OutputStream &outputStream);
   void draw(const CustomData &customData);
   void log(const std::string& message) {
     draw(CustomData::Log(message));
   }
 
 private:
-  std::shared_ptr<OutputStream> outputStream;
+  OutputStream &outputStream;
 };
 
 #endif

@@ -49,7 +49,7 @@ TcpStream::TcpStream(const std::string &host, int port) {
 
 class TcpInputStream : public InputStream {
 public:
-  TcpInputStream(std::shared_ptr<TcpStream> tcpStream)
+  TcpInputStream(TcpStream *tcpStream)
       : tcpStream(tcpStream), bufferPos(0), bufferSize(0) {}
   void readBytes(char *buffer, size_t byteCount) {
     while (byteCount > 0) {
@@ -84,12 +84,12 @@ private:
   char buffer[BUFFER_CAPACITY];
   size_t bufferPos;
   size_t bufferSize;
-  std::shared_ptr<TcpStream> tcpStream;
+  TcpStream *tcpStream;
 };
 
 class TcpOutputStream : public OutputStream {
 public:
-  TcpOutputStream(std::shared_ptr<TcpStream> tcpStream)
+  TcpOutputStream(TcpStream *tcpStream)
       : tcpStream(tcpStream), bufferPos(0), bufferSize(0) {}
   void writeBytes(const char *buffer, size_t byteCount) {
     while (byteCount > 0) {
@@ -124,15 +124,13 @@ private:
   char buffer[BUFFER_CAPACITY];
   size_t bufferPos;
   size_t bufferSize;
-  std::shared_ptr<TcpStream> tcpStream;
+  TcpStream *tcpStream;
 };
 
-std::shared_ptr<InputStream>
-getInputStream(std::shared_ptr<TcpStream> tcpStream) {
-  return std::shared_ptr<TcpInputStream>(new TcpInputStream(tcpStream));
+std::unique_ptr<InputStream> getInputStream(TcpStream *tcpStream) {
+  return std::make_unique<TcpInputStream>(tcpStream);
 }
 
-std::shared_ptr<OutputStream>
-getOutputStream(std::shared_ptr<TcpStream> tcpStream) {
-  return std::shared_ptr<TcpOutputStream>(new TcpOutputStream(tcpStream));
+std::unique_ptr<OutputStream> getOutputStream(TcpStream *tcpStream) {
+  return std::make_unique<TcpOutputStream>(tcpStream);
 }

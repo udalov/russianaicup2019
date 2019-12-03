@@ -12,6 +12,7 @@ public:
   float readFloat();
   double readDouble();
   std::string readString();
+  virtual ~InputStream() = default;
 };
 
 class OutputStream {
@@ -24,6 +25,7 @@ public:
   void write(float value);
   void write(double value);
   void write(const std::string &value);
+  virtual ~OutputStream() = default;
 };
 
 #endif

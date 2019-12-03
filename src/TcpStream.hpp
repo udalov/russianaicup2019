@@ -26,10 +26,8 @@ public:
   SOCKET sock;
 };
 
-std::shared_ptr<InputStream>
-getInputStream(std::shared_ptr<TcpStream> tcpStream);
+std::unique_ptr<InputStream> getInputStream(TcpStream *tcpStream);
 
-std::shared_ptr<OutputStream>
-getOutputStream(std::shared_ptr<TcpStream> tcpStream);
+std::unique_ptr<OutputStream> getOutputStream(TcpStream *tcpStream);
 
 #endif
