@@ -12,6 +12,7 @@
 #include "ColoredVertex.hpp"
 #include "TextAlignment.hpp"
 #include "UnitAction.hpp"
+#include "Versioned.hpp"
 
 class PlayerMessageGame {
 public:
@@ -39,9 +40,9 @@ class PlayerMessageGame::ActionMessage : public PlayerMessageGame {
 public:
     static const int TAG = 1;
 public:
-    std::unordered_map<int, UnitAction> action;
+    Versioned action;
     ActionMessage();
-    ActionMessage(std::unordered_map<int, UnitAction> action);
+    ActionMessage(Versioned action);
     static ActionMessage readFrom(InputStream& stream);
     void writeTo(OutputStream& stream) const;
     std::string toString() const override;

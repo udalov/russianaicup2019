@@ -2,7 +2,7 @@
     "health_pack_health": 50,
     "jump_pad_jump_speed": 20.0,
     "jump_pad_jump_time": 0.525,
-    "kill_score": 100,
+    "kill_score": 1000,
     "loot_box_size": {
         "x": 0.5,
         "y": 0.5
