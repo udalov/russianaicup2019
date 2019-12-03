@@ -6,37 +6,42 @@
 #include <string>
 #include <unordered_map>
 
-void run(const std::string &host, int port, const std::string &token) {
-  auto tcpStream = TcpStream(host, port);
-  auto inputStream = getInputStream(&tcpStream);
-  auto outputStream = getOutputStream(&tcpStream);
-  outputStream->write(token);
-  outputStream->flush();
-  MyStrategy myStrategy;
-  Debug debug(*outputStream);
-  while (true) {
-    auto message = ServerMessageGame::readFrom(*inputStream);
-    const auto& playerView = message.playerView;
-    if (!playerView) {
-      break;
-    }
-    std::unordered_map<int, UnitAction> actions;
-    for (const Unit &unit : playerView->game.units) {
-      if (unit.playerId == playerView->myId) {
-        actions.emplace(std::make_pair(
-            unit.id,
-            myStrategy.getAction(unit, playerView->game, debug)));
-      }
-    }
-    PlayerMessageGame::ActionMessage(actions).writeTo(*outputStream);
+using namespace std;
+
+void run(int port, unordered_map<string, string>&& params) {
+    auto tcpStream = TcpStream("127.0.0.1", port);
+    auto inputStream = getInputStream(&tcpStream);
+    auto outputStream = getOutputStream(&tcpStream);
+    outputStream->write(string("0000000000000000"));
     outputStream->flush();
-  }
+    MyStrategy myStrategy(move(params));
+    Debug debug(*outputStream);
+    while (true) {
+        auto message = ServerMessageGame::readFrom(*inputStream);
+        const auto& playerView = message.playerView;
+        if (!playerView) break;
+        unordered_map<int, UnitAction> actions;
+        for (const Unit& unit : playerView->game.units) {
+            if (unit.playerId == playerView->myId) {
+                actions.emplace(unit.id, myStrategy.getAction(unit, playerView->game, debug));
+            }
+        }
+        PlayerMessageGame::ActionMessage(actions).writeTo(*outputStream);
+        outputStream->flush();
+    }
 }
 
 int main(int argc, char *argv[]) {
-  std::string host = argc < 2 ? "127.0.0.1" : argv[1];
-  int port = argc < 3 ? 31001 : atoi(argv[2]);
-  std::string token = argc < 4 ? "0000000000000000" : argv[3];
-  run(host, port, token);
-  return 0;
+    unordered_map<string, string> params;
+    int port = 31001;
+    for (int i = 1; i < argc; i++) {
+        auto arg = string(argv[i]);
+        if (arg[0] != '-') {
+            port = stoi(arg);
+        } else {
+            params[arg] = "";
+        }
+    }
+    run(port, move(params));
+    return 0;
 }

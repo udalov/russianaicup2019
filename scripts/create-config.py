@@ -26,10 +26,15 @@ if sys.argv[3] != "Simple":
       }
     }
 
-properties = json.load(open("scripts/properties.json", "r"))
-properties["max_tick_count"] = 1000
-# properties["ticks_per_second"] = 6000
-# properties["updates_per_tick"] = 1
+args = sys.argv[4:]
+if "--custom-properties" in args:
+    properties = json.load(open("scripts/properties.json", "r"))
+    properties["max_tick_count"] = 1000
+    # properties["ticks_per_second"] = 6000
+    # properties["updates_per_tick"] = 1
+else:
+    properties = None
+
 data = {
   "options_preset": {
     "Custom": {

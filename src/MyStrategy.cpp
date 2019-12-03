@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include "Const.h"
 #include "util.h"
 
 using namespace std;
@@ -9,7 +10,7 @@ using namespace std;
 const size_t MICROTICKS = 100;
 const double EPS = 1e-9;
 
-MyStrategy::MyStrategy() {}
+MyStrategy::MyStrategy(unordered_map<string, string>&& params): params(params) {}
 
 unique_ptr<vector<UnitAction>> getRandomMoveSequence() {
     auto ans = make_unique<vector<UnitAction>>();
@@ -177,6 +178,13 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
 
 UnitAction MyStrategy::getAction(const Unit& me, const Game& game, Debug& debug) {
     auto tick = game.currentTick;
+    if (tick == 0) {
+        if (params.find("--dump-constants") != params.end()) {
+            dumpConstants(game.properties);
+            terminate();
+        }
+    }
+
     static auto moves = getRandomMoveSequence();
     UnitAction ans;
     if (moves->empty()) return ans;

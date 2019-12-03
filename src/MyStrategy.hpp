@@ -6,11 +6,15 @@
 #include "model/Game.hpp"
 #include "model/Unit.hpp"
 #include "model/UnitAction.hpp"
+#include <string>
+#include <unordered_map>
 
 class MyStrategy {
 public:
-  MyStrategy();
-  UnitAction getAction(const Unit &unit, const Game &game, Debug &debug);
+    MyStrategy(std::unordered_map<std::string, std::string>&& params);
+    UnitAction getAction(const Unit &unit, const Game &game, Debug &debug);
+private:
+    std::unordered_map<std::string, std::string> params;
 };
 
 #endif
