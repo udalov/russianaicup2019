@@ -37,14 +37,18 @@ unique_ptr<vector<UnitAction>> getRandomMoveSequence() {
     return ans;
 }
 
-Tile getTile(const Game& game, double x, double y) {
+Tile getTile(const Level& level, double x, double y) {
     auto i = static_cast<size_t>(x);
     auto j = static_cast<size_t>(y);
-    return /* i >= game.level.tiles.size() || j >= game.level.tiles[0].size() ? Tile::WALL : */ game.level.tiles[i][j];
+    return /* i >= level.tiles.size() || j >= level.tiles[0].size() ? Tile::WALL : */ level.tiles[i][j];
 }
 
-Tile getTile(const Game& game, Vec v) {
-    return getTile(game, v.x, v.y);
+Tile getTile(const Level& level, Vec v) {
+    return getTile(level, v.x, v.y);
+}
+
+Tile getTile(const Game& game, double x, double y) {
+    return getTile(game.level, x, y);
 }
 
 void drawUnit(const Unit& unit, const Game& game, const ColorFloat& color, Debug& debug) {
@@ -83,13 +87,14 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
         auto& move = moves[tick];
         auto vx = min(max(move.velocity, -unitMaxHorizontalSpeed), unitMaxHorizontalSpeed) * alpha;
         auto vy = 0.0;
+
         if (me.onLadder) {
             if (move.jump) {
                 vy = me.jumpState.speed * alpha;
             }
         } else {
             if (
-                me.jumpState.canJump && me.jumpState.maxTime >= -EPS && 
+                me.jumpState.canJump && me.jumpState.maxTime >= -EPS &&
                 (move.jump || !me.jumpState.canCancel)
             ) {
                 vy = me.jumpState.speed * alpha;
@@ -99,45 +104,51 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
         }
 
         for (size_t mt = 0; mt < MICROTICKS; mt++) {
+            if (!me.onLadder && me.jumpState.canJump && me.jumpState.maxTime >= -EPS &&
+                (move.jump || !me.jumpState.canCancel)) {
+                me.jumpState.maxTime -= alpha;
+            }
+
             if (vx < 0 && (
                 isWall(game, x - half + vx, y) ||
                 isWall(game, x - half + vx, y + uy/2) ||
                 isWall(game, x - half + vx, y + uy)
             )) {
-                vx = floor(x - half) - (x - half) + EPS;
+                x = floor(x - half) + half + EPS;
             } else if (vx > 0 && (
                 isWall(game, x + half + vx, y) ||
                 isWall(game, x + half + vx, y + uy/2) ||
                 isWall(game, x + half + vx, y + uy)
             )) {
-                vx = ceil(x + half) - (x + half) - EPS;
+                x = ceil(x + half) - half - EPS;
+            } else {
+                x += vx;
             }
-
-            x += vx;
 
             if (vy < 0 && (
                 isWallOrPlatform(game, x - half, y + vy, move.jumpDown) ||
                 isWallOrPlatform(game, x + half, y + vy, move.jumpDown)
             )) {
-                vy = floor(y) - y + EPS;
+                y = floor(y) + EPS;
                 me.jumpState.canJump = true;
                 me.jumpState.canCancel = true;
                 me.jumpState.maxTime = game.properties.unitJumpTime;
                 me.jumpState.speed = game.properties.unitJumpSpeed;
-            } else if (vy > 0) {
-                if (!me.onLadder) {
-                    me.jumpState.maxTime -= alpha;
-                    if (isWall(game, x - half, y + uy + vy) || isWall(game, x + half, y + uy + vy)) {
-                        vy = ceil(y + uy) - (y + uy) - EPS;
-                        me.jumpState.canJump = false;
-                        me.jumpState.canCancel = false;
-                        me.jumpState.maxTime = 0.0;
-                        me.jumpState.speed = 0.0;
-                    }
+                if (move.jump) {
+                    vy = me.jumpState.speed * alpha;
                 }
+            } else if (vy > 0 && !me.onLadder && (
+                isWall(game, x - half, y + uy + vy) || isWall(game, x + half, y + uy + vy)
+            )) {
+                y = ceil(y + uy) - uy - EPS;
+                me.jumpState.canJump = false;
+                me.jumpState.canCancel = false;
+                me.jumpState.maxTime = 0.0;
+                me.jumpState.speed = 0.0;
+                vy = -game.properties.unitFallSpeed * alpha;
+            } else {
+                y += vy;
             }
-
-            y += vy;
 
             if (getTile(game, x, y) == Tile::LADDER) {
                 me.onLadder = true;
@@ -148,11 +159,11 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
         }
 
         if (me.jumpState.maxTime <= -EPS) {
-            vy = 0.0;
             me.jumpState.canJump = false;
             me.jumpState.canCancel = false;
             me.jumpState.maxTime = 0.0;
             me.jumpState.speed = 0.0;
+            vy = 0.0;
         }
 
         if (getTile(game, x - half, y) == Tile::JUMP_PAD ||
@@ -163,6 +174,7 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
             me.jumpState.canCancel = false;
             me.jumpState.maxTime = game.properties.jumpPadJumpTime;
             me.jumpState.speed = game.properties.jumpPadJumpSpeed;
+            vy = me.jumpState.speed * alpha;
         }
 
         if (tick > 10 && (tick + game.currentTick) % 10 == 0) {
@@ -175,6 +187,22 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
         }
     }
 }
+
+string surroundingToString(const Vec& v, const Level& level) {
+    string ans = "";
+    for (int dy = 2; dy >= -2; dy--) {
+        for (int dx = -2; dx <= 2; dx++) {
+            auto z = v + Vec(dx, dy);
+            auto tile = 0 <= z.x && z.x < level.tiles.size() && 0 <= z.y && z.y < level.tiles[0].size()
+                ? getTile(level, z) : Tile::WALL;
+            ans += tileToChar(tile);
+        }
+        ans += "\n";
+    }
+    return ans;
+}
+
+int errors = 0;
 
 UnitAction MyStrategy::getAction(const Unit& me, const Game& game, Debug& debug) {
     auto tick = game.currentTick;
@@ -191,7 +219,12 @@ UnitAction MyStrategy::getAction(const Unit& me, const Game& game, Debug& debug)
 
     cout << tick << " " << me.toString() << endl;
     if (tick != 0 && prediction.toString() != me.toString()) {
-        cout << "ERROR! predicted:" << endl << tick << " " << prediction.toString() << endl << endl;
+        cout << "ERROR! predicted:" << endl << tick << " " << prediction.toString() << endl;
+        cout << surroundingToString(me.position, game.level);
+        errors++;
+    }
+    if (tick == game.properties.maxTickCount - 1) {
+        cout << "TOTAL ERRORS: " << errors << endl;
     }
 
     simulate(me, game, *moves, debug, 300);

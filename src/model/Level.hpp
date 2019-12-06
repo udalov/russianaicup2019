@@ -15,6 +15,7 @@ public:
     static Level readFrom(InputStream& stream);
     void writeTo(OutputStream& stream) const;
     std::string toString() const;
+    std::vector<std::string> toStrings() const;
 };
 
 #endif

@@ -1,5 +1,7 @@
 #include "Level.hpp"
 
+using namespace std;
+
 Level::Level() { }
 Level::Level(std::vector<std::vector<Tile>> tiles) : tiles(tiles) { }
 Level Level::readFrom(InputStream& stream) {
@@ -40,8 +42,23 @@ void Level::writeTo(OutputStream& stream) const {
         }
     }
 }
-std::string Level::toString() const {
-    return std::string("Level") + "(" +
-        "TODO" + 
-        ")";
+
+string Level::toString() const {
+    auto lines = toStrings();
+    reverse(lines.begin(), lines.end());
+    string ans = "";
+    for (auto& line : lines) ans += line, ans += "\n";
+    return ans;
+}
+
+vector<string> Level::toStrings() const {
+    vector<string> ans;
+    for (size_t j = 0; j < tiles[0].size(); j++) {
+        string s = "";
+        for (size_t i = 0; i < tiles.size(); i++) {
+            s += tileToChar(tiles[i][j]);
+        }
+        ans.push_back(s);
+    }
+    return ans;
 }

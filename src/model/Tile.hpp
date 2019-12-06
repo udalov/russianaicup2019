@@ -11,4 +11,6 @@ enum Tile {
     JUMP_PAD = 4
 };
 
+char tileToChar(Tile tile);
+
 #endif
