@@ -26,7 +26,9 @@ if sys.argv[3] != "Simple":
       }
     }
 
-args = sys.argv[4:]
+seed = int(sys.argv[4])
+
+args = sys.argv[5:]
 if "--custom-properties" in args:
     properties = json.load(open("scripts/properties.json", "r"))
     properties["max_tick_count"] = 1000
@@ -36,6 +38,7 @@ else:
     properties = None
 
 data = {
+  "seed": seed,
   "options_preset": {
     "Custom": {
       "level": level,
