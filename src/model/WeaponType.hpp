@@ -9,4 +9,6 @@ enum WeaponType {
     ROCKET_LAUNCHER = 2
 };
 
+std::string weaponTypeToString(WeaponType type);
+
 #endif

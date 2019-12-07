@@ -50,5 +50,5 @@ std::string Unit::toString() const {
         // (stand ? "S" : ".") +
         // (onGround ? "G" : ".") +
         (onLadder ? "L" : ".") +
-        (weapon ? " W" : "");
+        (weapon ? " " + weapon->toString() : "");
 }

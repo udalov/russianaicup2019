@@ -1,6 +1,5 @@
 #include "Item.hpp"
 
-
 Item::HealthPack::HealthPack() { }
 Item::HealthPack::HealthPack(int health) : health(health) { }
 Item::HealthPack Item::HealthPack::readFrom(InputStream& stream) {
@@ -13,9 +12,7 @@ void Item::HealthPack::writeTo(OutputStream& stream) const {
     stream.write(health);
 }
 std::string Item::HealthPack::toString() const {
-    return std::string("Item::HealthPack") + "(" +
-        std::to_string(health) +
-        ")";
+    return std::string("HP(") + std::to_string(health) + ")";
 }
 
 Item::Weapon::Weapon() { }
@@ -42,9 +39,7 @@ void Item::Weapon::writeTo(OutputStream& stream) const {
     stream.write((int)(weaponType));
 }
 std::string Item::Weapon::toString() const {
-    return std::string("Item::Weapon") + "(" +
-        "TODO" + 
-        ")";
+    return std::string("W(") + weaponTypeToString(weaponType) + ")";
 }
 
 Item::Mine::Mine() { }
@@ -56,8 +51,7 @@ void Item::Mine::writeTo(OutputStream& stream) const {
     stream.write(TAG);
 }
 std::string Item::Mine::toString() const {
-    return std::string("Item::Mine") + "(" +
-        ")";
+    return "M";
 }
 std::shared_ptr<Item> Item::readFrom(InputStream& stream) {
     switch (stream.readInt()) {

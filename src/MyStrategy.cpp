@@ -66,6 +66,13 @@ bool isWallOrPlatform(const Game& game, double x, double y, bool jumpDown) {
     return tile == Tile::WALL || tile == Tile::LADDER || (!jumpDown && tile == Tile::PLATFORM);
 }
 
+bool intersects(const Unit& unit, const LootBox& box, const Game& game) {
+    static auto unitSize = game.properties.unitSize;
+    static auto lootBoxSize = game.properties.lootBoxSize;
+    return 2 * abs(unit.position.x - box.position.x) <= unitSize.x + lootBoxSize.x &&
+        2 * abs(unit.position.y + unitSize.y/2 - box.position.y) <= unitSize.y + lootBoxSize.y;
+}
+
 Unit prediction;
 
 void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug, size_t ticks) {
@@ -175,6 +182,24 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
             me.jumpState.maxTime = game.properties.jumpPadJumpTime;
             me.jumpState.speed = game.properties.jumpPadJumpSpeed;
             vy = me.jumpState.speed * alpha;
+        }
+
+        // TODO: optimize
+        auto& loot = game.lootBoxes;
+        for (size_t i = 0; i < loot.size();) {
+            auto& box = loot[i];
+            if (!intersects(me, box, game)) { i++; continue; }
+
+            auto weapon = dynamic_pointer_cast<Item::Weapon>(box.item);
+            if (weapon && (!me.weapon || move.swapWeapon)) {
+                me.weapon = make_shared<Weapon>();
+                me.weapon->typ = weapon->weaponType;
+            }
+
+            if (i + 1 == loot.size()) break; else {
+                swap(loot[i], loot.back());
+                loot.pop_back();
+            }
         }
 
         if (tick > 10 && (tick + game.currentTick) % 10 == 0) {
