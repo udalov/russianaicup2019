@@ -20,22 +20,6 @@ WeaponParams WeaponParams::readFrom(InputStream& stream) {
     }
     return result;
 }
-void WeaponParams::writeTo(OutputStream& stream) const {
-    stream.write(magazineSize);
-    stream.write(fireRate);
-    stream.write(reloadTime);
-    stream.write(minSpread);
-    stream.write(maxSpread);
-    stream.write(recoil);
-    stream.write(aimSpeed);
-    bullet.writeTo(stream);
-    if (explosion) {
-        stream.write(false);
-    } else {
-        stream.write(true);
-        (*explosion).writeTo(stream);
-    }
-}
 std::string WeaponParams::toString() const {
     return std::string("WeaponParams") + "(" +
         std::to_string(magazineSize) +

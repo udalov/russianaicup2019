@@ -3,7 +3,6 @@
 
 #include "../Stream.hpp"
 #include <string>
-#include <stdexcept>
 #include "Vec2D.h"
 
 class UnitAction {
@@ -18,7 +17,6 @@ public:
     bool plantMine;
     UnitAction();
     UnitAction(double velocity, bool jump, bool jumpDown, Vec2Double aim, bool shoot, bool reload, bool swapWeapon, bool plantMine);
-    static UnitAction readFrom(InputStream& stream);
     void writeTo(OutputStream& stream) const;
     std::string toString() const;
 };

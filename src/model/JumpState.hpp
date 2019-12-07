@@ -13,7 +13,6 @@ public:
     JumpState();
     JumpState(bool canJump, double speed, double maxTime, bool canCancel);
     static JumpState readFrom(InputStream& stream);
-    void writeTo(OutputStream& stream) const;
     std::string toString() const;
 };
 

@@ -7,10 +7,6 @@ Item::HealthPack Item::HealthPack::readFrom(InputStream& stream) {
     result.health = stream.readInt();
     return result;
 }
-void Item::HealthPack::writeTo(OutputStream& stream) const {
-    stream.write(TAG);
-    stream.write(health);
-}
 std::string Item::HealthPack::toString() const {
     return std::string("HP(") + std::to_string(health) + ")";
 }
@@ -34,10 +30,6 @@ Item::Weapon Item::Weapon::readFrom(InputStream& stream) {
     }
     return result;
 }
-void Item::Weapon::writeTo(OutputStream& stream) const {
-    stream.write(TAG);
-    stream.write((int)(weaponType));
-}
 std::string Item::Weapon::toString() const {
     return std::string("W(") + weaponTypeToString(weaponType) + ")";
 }
@@ -46,9 +38,6 @@ Item::Mine::Mine() { }
 Item::Mine Item::Mine::readFrom(InputStream& stream) {
     Item::Mine result;
     return result;
-}
-void Item::Mine::writeTo(OutputStream& stream) const {
-    stream.write(TAG);
 }
 std::string Item::Mine::toString() const {
     return "M";

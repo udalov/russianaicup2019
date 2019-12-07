@@ -2,18 +2,6 @@
 
 UnitAction::UnitAction() : velocity(), jump(), jumpDown(), aim(), shoot(), swapWeapon(), plantMine() {}
 UnitAction::UnitAction(double velocity, bool jump, bool jumpDown, Vec2Double aim, bool shoot, bool reload, bool swapWeapon, bool plantMine) : velocity(velocity), jump(jump), jumpDown(jumpDown), aim(aim), shoot(shoot), reload(reload), swapWeapon(swapWeapon), plantMine(plantMine) { }
-UnitAction UnitAction::readFrom(InputStream& stream) {
-    UnitAction result;
-    result.velocity = stream.readDouble();
-    result.jump = stream.readBool();
-    result.jumpDown = stream.readBool();
-    result.aim = Vec2Double::readFrom(stream);
-    result.shoot = stream.readBool();
-    result.reload = stream.readBool();
-    result.swapWeapon = stream.readBool();
-    result.plantMine = stream.readBool();
-    return result;
-}
 void UnitAction::writeTo(OutputStream& stream) const {
     stream.write(velocity);
     stream.write(jump);

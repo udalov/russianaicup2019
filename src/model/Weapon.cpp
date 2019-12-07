@@ -41,31 +41,6 @@ Weapon Weapon::readFrom(InputStream& stream) {
     }
     return result;
 }
-void Weapon::writeTo(OutputStream& stream) const {
-    stream.write((int)(typ));
-    params.writeTo(stream);
-    stream.write(magazine);
-    stream.write(wasShooting);
-    stream.write(spread);
-    if (fireTimer) {
-        stream.write(false);
-    } else {
-        stream.write(true);
-        stream.write((*fireTimer));
-    }
-    if (lastAngle) {
-        stream.write(false);
-    } else {
-        stream.write(true);
-        stream.write((*lastAngle));
-    }
-    if (lastFireTick) {
-        stream.write(false);
-    } else {
-        stream.write(true);
-        stream.write((*lastFireTick));
-    }
-}
 std::string Weapon::toString() const {
     // TODO
     return weaponTypeToString(typ);

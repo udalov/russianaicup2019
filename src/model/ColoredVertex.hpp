@@ -3,7 +3,6 @@
 
 #include "../Stream.hpp"
 #include <string>
-#include <stdexcept>
 #include "ColorFloat.hpp"
 #include "Vec2D.h"
 

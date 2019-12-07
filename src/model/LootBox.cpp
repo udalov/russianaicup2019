@@ -11,11 +11,6 @@ LootBox LootBox::readFrom(InputStream& stream) {
     result.item = Item::readFrom(stream);
     return result;
 }
-void LootBox::writeTo(OutputStream& stream) const {
-    position.writeTo(stream);
-    size.writeTo(stream);
-    item->writeTo(stream);
-}
 std::string LootBox::toString() const {
     return position.toString() + " " + item->toString();
 }

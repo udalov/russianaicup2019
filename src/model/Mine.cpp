@@ -33,20 +33,6 @@ Mine Mine::readFrom(InputStream& stream) {
     result.explosionParams = ExplosionParams::readFrom(stream);
     return result;
 }
-void Mine::writeTo(OutputStream& stream) const {
-    stream.write(playerId);
-    position.writeTo(stream);
-    size.writeTo(stream);
-    stream.write((int)(state));
-    if (timer) {
-        stream.write(false);
-    } else {
-        stream.write(true);
-        stream.write((*timer));
-    }
-    stream.write(triggerRadius);
-    explosionParams.writeTo(stream);
-}
 std::string Mine::toString() const {
     return std::string("Mine") + "(" +
         std::to_string(playerId) +

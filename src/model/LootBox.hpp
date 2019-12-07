@@ -3,9 +3,7 @@
 
 #include "../Stream.hpp"
 #include <string>
-#include <stdexcept>
 #include "Item.hpp"
-#include "WeaponType.hpp"
 #include "Vec2D.h"
 
 class LootBox {
@@ -16,7 +14,6 @@ public:
     LootBox();
     LootBox(Vec2Double position, Vec2Double size, std::shared_ptr<Item> item);
     static LootBox readFrom(InputStream& stream);
-    void writeTo(OutputStream& stream) const;
     std::string toString() const;
 };
 

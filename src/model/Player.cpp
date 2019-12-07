@@ -8,10 +8,6 @@ Player Player::readFrom(InputStream& stream) {
     result.score = stream.readInt();
     return result;
 }
-void Player::writeTo(OutputStream& stream) const {
-    stream.write(id);
-    stream.write(score);
-}
 bool Player::operator ==(const Player& other) const {
     return id == other.id && score == other.score;
 }

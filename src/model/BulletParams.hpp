@@ -12,7 +12,6 @@ public:
     BulletParams();
     BulletParams(double speed, double size, int damage);
     static BulletParams readFrom(InputStream& stream);
-    void writeTo(OutputStream& stream) const;
     std::string toString() const;
 };
 

@@ -4,7 +4,6 @@
 #include "../Stream.hpp"
 #include <string>
 #include <vector>
-#include <stdexcept>
 #include "Tile.hpp"
 
 class Level {
@@ -13,7 +12,6 @@ public:
     Level();
     Level(std::vector<std::vector<Tile>> tiles);
     static Level readFrom(InputStream& stream);
-    void writeTo(OutputStream& stream) const;
     std::string toString() const;
     std::vector<std::string> toStrings() const;
 };

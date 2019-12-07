@@ -11,7 +11,6 @@ public:
     ExplosionParams();
     ExplosionParams(double radius, int damage);
     static ExplosionParams readFrom(InputStream& stream);
-    void writeTo(OutputStream& stream) const;
     std::string toString() const;
 };
 

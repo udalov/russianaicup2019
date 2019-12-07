@@ -4,7 +4,6 @@
 #include "../Stream.hpp"
 #include <memory>
 #include <string>
-#include <stdexcept>
 #include "WeaponType.hpp"
 
 class Item {
@@ -14,7 +13,6 @@ public:
     class Mine;
 
     static std::shared_ptr<Item> readFrom(InputStream& stream);
-    virtual void writeTo(OutputStream& stream) const = 0;
     virtual std::string toString() const = 0;
 };
 
@@ -26,7 +24,6 @@ public:
     HealthPack();
     HealthPack(int health);
     static HealthPack readFrom(InputStream& stream);
-    void writeTo(OutputStream& stream) const;
     std::string toString() const override;
 };
 
@@ -38,7 +35,6 @@ public:
     Weapon();
     Weapon(WeaponType weaponType);
     static Weapon readFrom(InputStream& stream);
-    void writeTo(OutputStream& stream) const;
     std::string toString() const override;
 };
 
@@ -48,7 +44,6 @@ public:
 public:
     Mine();
     static Mine readFrom(InputStream& stream);
-    void writeTo(OutputStream& stream) const;
     std::string toString() const override;
 };
 

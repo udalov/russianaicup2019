@@ -23,25 +23,6 @@ Unit Unit::readFrom(InputStream& stream) {
     }
     return result;
 }
-void Unit::writeTo(OutputStream& stream) const {
-    stream.write(playerId);
-    stream.write(id);
-    stream.write(health);
-    position.writeTo(stream);
-    size.writeTo(stream);
-    jumpState.writeTo(stream);
-    stream.write(walkedRight);
-    stream.write(stand);
-    stream.write(onGround);
-    stream.write(onLadder);
-    stream.write(mines);
-    if (weapon) {
-        stream.write(false);
-    } else {
-        stream.write(true);
-        (*weapon).writeTo(stream);
-    }
-}
 std::string Unit::toString() const {
     return position.toString() + " " +
         std::to_string(health) + " " +

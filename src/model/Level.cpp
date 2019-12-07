@@ -33,15 +33,6 @@ Level Level::readFrom(InputStream& stream) {
     }
     return result;
 }
-void Level::writeTo(OutputStream& stream) const {
-    stream.write((int)(tiles.size()));
-    for (const std::vector<Tile>& tilesElement : tiles) {
-        stream.write((int)(tilesElement.size()));
-        for (const Tile& tilesElementElement : tilesElement) {
-            stream.write((int)(tilesElementElement));
-        }
-    }
-}
 
 string Level::toString() const {
     auto lines = toStrings();

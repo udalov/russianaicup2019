@@ -12,16 +12,3 @@ ServerMessageGame ServerMessageGame::readFrom(InputStream& stream) {
     }
     return result;
 }
-void ServerMessageGame::writeTo(OutputStream& stream) const {
-    if (playerView) {
-        stream.write(false);
-    } else {
-        stream.write(true);
-        (*playerView).writeTo(stream);
-    }
-}
-std::string ServerMessageGame::toString() const {
-    return std::string("ServerMessageGame") + "(" +
-        "TODO" + 
-        ")";
-}

@@ -31,21 +31,6 @@ Bullet Bullet::readFrom(InputStream& stream) {
     }
     return result;
 }
-void Bullet::writeTo(OutputStream& stream) const {
-    stream.write((int)(weaponType));
-    stream.write(unitId);
-    stream.write(playerId);
-    position.writeTo(stream);
-    velocity.writeTo(stream);
-    stream.write(damage);
-    stream.write(size);
-    if (explosionParams) {
-        stream.write(false);
-    } else {
-        stream.write(true);
-        (*explosionParams).writeTo(stream);
-    }
-}
 std::string Bullet::toString() const {
     return std::string("Bullet") + "(" +
         "TODO" + 

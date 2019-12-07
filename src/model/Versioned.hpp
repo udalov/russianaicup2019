@@ -12,9 +12,7 @@ public:
     std::unordered_map<int, UnitAction> inner;
     Versioned();
     Versioned(std::unordered_map<int, UnitAction> inner);
-    static Versioned readFrom(InputStream& stream);
     void writeTo(OutputStream& stream) const;
-    std::string toString() const;
 };
 
 #endif

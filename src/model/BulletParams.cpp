@@ -9,11 +9,6 @@ BulletParams BulletParams::readFrom(InputStream& stream) {
     result.damage = stream.readInt();
     return result;
 }
-void BulletParams::writeTo(OutputStream& stream) const {
-    stream.write(speed);
-    stream.write(size);
-    stream.write(damage);
-}
 std::string BulletParams::toString() const {
     return std::string("BulletParams") + "(" +
         std::to_string(speed) +

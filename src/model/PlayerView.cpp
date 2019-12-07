@@ -8,13 +8,3 @@ PlayerView PlayerView::readFrom(InputStream& stream) {
     result.game = Game::readFrom(stream);
     return result;
 }
-void PlayerView::writeTo(OutputStream& stream) const {
-    stream.write(myId);
-    game.writeTo(stream);
-}
-std::string PlayerView::toString() const {
-    return std::string("PlayerView") + "(" +
-        std::to_string(myId) +
-        game.toString() +
-        ")";
-}

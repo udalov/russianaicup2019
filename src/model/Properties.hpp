@@ -4,11 +4,9 @@
 #include "../Stream.hpp"
 #include <memory>
 #include <string>
-#include <stdexcept>
 #include <unordered_map>
 #include "WeaponType.hpp"
 #include "WeaponParams.hpp"
-#include "BulletParams.hpp"
 #include "ExplosionParams.hpp"
 #include "Vec2D.h"
 
@@ -38,8 +36,6 @@ public:
     Properties();
     Properties(int maxTickCount, int teamSize, double ticksPerSecond, int updatesPerTick, Vec2Double lootBoxSize, Vec2Double unitSize, double unitMaxHorizontalSpeed, double unitFallSpeed, double unitJumpTime, double unitJumpSpeed, double jumpPadJumpTime, double jumpPadJumpSpeed, int unitMaxHealth, int healthPackHealth, std::unordered_map<WeaponType, WeaponParams> weaponParams, Vec2Double mineSize, ExplosionParams mineExplosionParams, double minePrepareTime, double mineTriggerTime, double mineTriggerRadius, int killScore);
     static Properties readFrom(InputStream& stream);
-    void writeTo(OutputStream& stream) const;
-    std::string toString() const;
 };
 
 #endif

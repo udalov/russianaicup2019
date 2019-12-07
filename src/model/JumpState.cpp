@@ -12,12 +12,6 @@ JumpState JumpState::readFrom(InputStream& stream) {
     result.canCancel = stream.readBool();
     return result;
 }
-void JumpState::writeTo(OutputStream& stream) const {
-    stream.write(canJump);
-    stream.write(speed);
-    stream.write(maxTime);
-    stream.write(canCancel);
-}
 std::string JumpState::toString() const {
     return std::string(canJump ? "^" : ".") + 
         std::string(canCancel ? "v" : ".") + " " +
