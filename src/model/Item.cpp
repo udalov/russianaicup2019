@@ -1,56 +1,35 @@
 #include "Item.hpp"
 
-Item::HealthPack::HealthPack() { }
-Item::HealthPack::HealthPack(int health) : health(health) { }
-Item::HealthPack Item::HealthPack::readFrom(InputStream& stream) {
-    Item::HealthPack result;
-    result.health = stream.readInt();
-    return result;
-}
-std::string Item::HealthPack::toString() const {
-    return std::string("HP(") + std::to_string(health) + ")";
-}
+using namespace std;
 
-Item::Weapon::Weapon() { }
-Item::Weapon::Weapon(WeaponType weaponType) : weaponType(weaponType) { }
-Item::Weapon Item::Weapon::readFrom(InputStream& stream) {
-    Item::Weapon result;
-    switch (stream.readInt()) {
-    case 0:
-        result.weaponType = WeaponType::PISTOL;
-        break;
-    case 1:
-        result.weaponType = WeaponType::ASSAULT_RIFLE;
-        break;
-    case 2:
-        result.weaponType = WeaponType::ROCKET_LAUNCHER;
-        break;
-    default:
-        throw std::runtime_error("Unexpected discriminant value");
+Item::Item() {}
+string Item::toString() const {
+    switch (data.index()) {
+        case 0: return string("HP(") + to_string(*get_if<int>(&data)) + ")";
+        case 1: return string("W(") + weaponTypeToString(weaponType()) + ")";
+        case 2: return "M";
+        default: return "?";
     }
-    return result;
 }
-std::string Item::Weapon::toString() const {
-    return std::string("W(") + weaponTypeToString(weaponType) + ")";
+bool Item::isWeapon() const {
+    return data.index() == 1;
 }
-
-Item::Mine::Mine() { }
-Item::Mine Item::Mine::readFrom(InputStream& stream) {
-    Item::Mine result;
-    return result;
+WeaponType Item::weaponType() const {
+    return *get_if<WeaponType>(&data);
 }
-std::string Item::Mine::toString() const {
-    return "M";
-}
-std::shared_ptr<Item> Item::readFrom(InputStream& stream) {
+WeaponType readWeaponType(InputStream& stream) {
     switch (stream.readInt()) {
-    case 0:
-        return std::shared_ptr<Item::HealthPack>(new Item::HealthPack(Item::HealthPack::readFrom(stream)));
-    case 1:
-        return std::shared_ptr<Item::Weapon>(new Item::Weapon(Item::Weapon::readFrom(stream)));
-    case 2:
-        return std::shared_ptr<Item::Mine>(new Item::Mine(Item::Mine::readFrom(stream)));
-    default:
-        throw std::runtime_error("Unexpected discriminant value");
+        case 0: return WeaponType::PISTOL;
+        case 1: return WeaponType::ASSAULT_RIFLE;
+        case 2: return WeaponType::ROCKET_LAUNCHER;
+        default: throw std::runtime_error("Unexpected discriminant value");
+    }
+}
+Item Item::readFrom(InputStream& stream) {
+    switch (stream.readInt()) {
+        case 0: return Item(decltype(data)(stream.readInt()));
+        case 1: return Item(decltype(data)(readWeaponType(stream)));
+        case 2: return Item(decltype(data)());
+        default: throw std::runtime_error("Unexpected discriminant value");
     }
 };

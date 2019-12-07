@@ -2,49 +2,23 @@
 #define _MODEL_ITEM_HPP_
 
 #include "../Stream.hpp"
-#include <memory>
 #include <string>
+#include <tuple>
+#include <variant>
 #include "WeaponType.hpp"
 
 class Item {
 public:
-    class HealthPack;
-    class Weapon;
-    class Mine;
+    // Health amount, weapon type, or mine
+    std::variant<int, WeaponType, std::tuple<>> data;
 
-    static std::shared_ptr<Item> readFrom(InputStream& stream);
-    virtual std::string toString() const = 0;
-};
+    bool isWeapon() const;
+    WeaponType weaponType() const;
 
-class Item::HealthPack : public Item {
-public:
-    static const int TAG = 0;
-public:
-    int health;
-    HealthPack();
-    HealthPack(int health);
-    static HealthPack readFrom(InputStream& stream);
-    std::string toString() const override;
-};
-
-class Item::Weapon : public Item {
-public:
-    static const int TAG = 1;
-public:
-    WeaponType weaponType;
-    Weapon();
-    Weapon(WeaponType weaponType);
-    static Weapon readFrom(InputStream& stream);
-    std::string toString() const override;
-};
-
-class Item::Mine : public Item {
-public:
-    static const int TAG = 2;
-public:
-    Mine();
-    static Mine readFrom(InputStream& stream);
-    std::string toString() const override;
+    Item();
+    Item(std::variant<int, WeaponType, std::tuple<>> data) : data(data) {}
+    static Item readFrom(InputStream& stream);
+    std::string toString() const;
 };
 
 #endif

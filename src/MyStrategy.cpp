@@ -183,10 +183,9 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
             auto& box = loot[i];
             if (!intersects(me, box)) { i++; continue; }
 
-            auto weapon = dynamic_pointer_cast<Item::Weapon>(box.item);
-            if (weapon && (!me.weapon || move.swapWeapon)) {
+            if (box.item.isWeapon() && (!me.weapon || move.swapWeapon)) {
                 me.weapon = make_shared<Weapon>();
-                me.weapon->typ = weapon->weaponType;
+                me.weapon->type = box.item.weaponType();
             }
 
             if (i + 1 == loot.size()) break; else {
@@ -255,7 +254,7 @@ UnitAction MyStrategy::getAction(const Unit& me, const Game& game, Debug& debug)
         return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
     });
     auto nearestWeapon = minBy(game.lootBoxes, [&me](auto& lootBox) {
-        return dynamic_pointer_cast<Item::Weapon>(lootBox.item) ? me.position.sqrDist(lootBox.position) : 1e100;
+        return lootBox.item.isWeapon() ? me.position.sqrDist(lootBox.position) : 1e100;
     });
     Vec target = me.position;
     if (me.weapon == nullptr && nearestWeapon != nullptr) {

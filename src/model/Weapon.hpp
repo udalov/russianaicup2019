@@ -9,7 +9,7 @@
 
 class Weapon {
 public:
-    WeaponType typ;
+    WeaponType type;
     WeaponParams params;
     int magazine;
     bool wasShooting;
@@ -18,7 +18,7 @@ public:
     std::shared_ptr<double> lastAngle;
     std::shared_ptr<int> lastFireTick;
     Weapon();
-    Weapon(WeaponType typ, WeaponParams params, int magazine, bool wasShooting, double spread, std::shared_ptr<double> fireTimer, std::shared_ptr<double> lastAngle, std::shared_ptr<int> lastFireTick);
+    Weapon(WeaponType type, WeaponParams params, int magazine, bool wasShooting, double spread, std::shared_ptr<double> fireTimer, std::shared_ptr<double> lastAngle, std::shared_ptr<int> lastFireTick);
     static Weapon readFrom(InputStream& stream);
     std::string toString() const;
 };
