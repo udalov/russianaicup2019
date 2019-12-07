@@ -23,6 +23,8 @@ template<typename T> struct Vec2D {
     constexpr void operator*=(T coeff) { x *= coeff; y *= coeff; }
     constexpr void operator/=(T coeff) { x /= coeff; y /= coeff; }
 
+    constexpr bool operator==(const Vec2D& other) const { return x == other.x && y == other.y; }
+
     Vec2D normalize() const { return *this * (1 / len()); }
 
     constexpr T dot(const Vec2D& v) const { return x*v.x + y*v.y; }

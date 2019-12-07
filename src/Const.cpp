@@ -1,18 +1,40 @@
 #include "Const.h"
 
-#ifndef LOCAL
+#include <iostream>
+#include <iomanip>
 #include <stdexcept>
+
+using namespace std;
+
+template<typename T> void check(T expected, T actual) {
+    if (!(expected == actual)) {
+        throw std::runtime_error("Constant value is incorrect");
+    }
+}
+
+void checkConstants(const Properties& properties) {
+    check(jumpPadJumpSpeed, properties.jumpPadJumpSpeed);
+    check(jumpPadJumpTime, properties.jumpPadJumpTime);
+    check(lootBoxSize, properties.lootBoxSize);
+    check(ticksPerSecond, properties.ticksPerSecond);
+    check(unitFallSpeed, properties.unitFallSpeed);
+    check(unitJumpSpeed, properties.unitJumpSpeed);
+    check(unitJumpTime, properties.unitJumpTime);
+    check(unitMaxHorizontalSpeed, properties.unitMaxHorizontalSpeed);
+    check(unitSize, properties.unitSize);
+    check(updatesPerTick, properties.updatesPerTick);
+}
+
+
+#ifndef LOCAL
 void dumpConstants(const Properties& p) {
     throw std::runtime_error("Unsupported");
 }
 #else
 
 #include "nlohmann/json.hpp.inc"
-#include <iostream>
-#include <iomanip>
 
 using json = nlohmann::json;
-using namespace std;
 
 void dumpConstants(const Properties& p) {
     json a = {

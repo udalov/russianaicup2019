@@ -7,7 +7,6 @@
 
 using namespace std;
 
-const size_t MICROTICKS = 100;
 const double EPS = 1e-9;
 
 MyStrategy::MyStrategy(unordered_map<string, string>&& params): params(params) {}
@@ -24,7 +23,7 @@ unique_ptr<vector<UnitAction>> getRandomMoveSequence() {
     UnitAction left;
     left.velocity = -100.0;
 
-    auto t = 100 / MICROTICKS;
+    auto t = 100 / updatesPerTick;
     size_t cp1 = 13 * t;
     size_t cp2 = 25 * t;
     size_t cp3 = 186 * t;
@@ -51,9 +50,9 @@ Tile getTile(const Game& game, double x, double y) {
     return getTile(game.level, x, y);
 }
 
-void drawUnit(const Unit& unit, const Game& game, const ColorFloat& color, Debug& debug) {
-    auto corner = unit.position - Vec(game.properties.unitSize.x / 2, 0);
-    debug.draw(CustomData::Rect(corner, game.properties.unitSize, color));
+void drawUnit(const Unit& unit, const ColorFloat& color, Debug& debug) {
+    auto corner = unit.position - Vec(unitSize.x / 2, 0);
+    debug.draw(CustomData::Rect(corner, unitSize, color));
 }
 
 bool isWall(const Game& game, double x, double y) {
@@ -66,9 +65,7 @@ bool isWallOrPlatform(const Game& game, double x, double y, bool jumpDown) {
     return tile == Tile::WALL || tile == Tile::LADDER || (!jumpDown && tile == Tile::PLATFORM);
 }
 
-bool intersects(const Unit& unit, const LootBox& box, const Game& game) {
-    static auto unitSize = game.properties.unitSize;
-    static auto lootBoxSize = game.properties.lootBoxSize;
+bool intersects(const Unit& unit, const LootBox& box) {
     return 2 * abs(unit.position.x - box.position.x) <= unitSize.x + lootBoxSize.x &&
         2 * abs(unit.position.y + unitSize.y/2 - box.position.y) <= unitSize.y + lootBoxSize.y;
 }
@@ -76,11 +73,7 @@ bool intersects(const Unit& unit, const LootBox& box, const Game& game) {
 Unit prediction;
 
 void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug, size_t ticks) {
-    static auto unitMaxHorizontalSpeed = game.properties.unitMaxHorizontalSpeed;
-    static auto ticksPerSecond = game.properties.ticksPerSecond;
-    static auto unitSize = game.properties.unitSize;
-
-    auto alpha = 1.0 / ticksPerSecond / MICROTICKS;
+    auto alpha = 1.0 / ticksPerSecond / updatesPerTick;
 
     debug.log(string("cur: ") + me.toString());
 
@@ -106,11 +99,11 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
             ) {
                 vy = me.jumpState.speed * alpha;
             } else {
-                vy = -game.properties.unitFallSpeed * alpha;
+                vy = -unitFallSpeed * alpha;
             }
         }
 
-        for (size_t mt = 0; mt < MICROTICKS; mt++) {
+        for (size_t mt = 0; mt < updatesPerTick; mt++) {
             if (!me.onLadder && me.jumpState.canJump && me.jumpState.maxTime >= -EPS &&
                 (move.jump || !me.jumpState.canCancel)) {
                 me.jumpState.maxTime -= alpha;
@@ -139,8 +132,8 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
                 y = floor(y) + EPS;
                 me.jumpState.canJump = true;
                 me.jumpState.canCancel = true;
-                me.jumpState.maxTime = game.properties.unitJumpTime;
-                me.jumpState.speed = game.properties.unitJumpSpeed;
+                me.jumpState.maxTime = unitJumpTime;
+                me.jumpState.speed = unitJumpSpeed;
                 if (move.jump) {
                     vy = me.jumpState.speed * alpha;
                 }
@@ -152,14 +145,14 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
                 me.jumpState.canCancel = false;
                 me.jumpState.maxTime = 0.0;
                 me.jumpState.speed = 0.0;
-                vy = -game.properties.unitFallSpeed * alpha;
+                vy = -unitFallSpeed * alpha;
             } else {
                 y += vy;
             }
 
             if (getTile(game, x, y) == Tile::LADDER) {
                 me.onLadder = true;
-                me.jumpState.maxTime = game.properties.unitJumpTime;
+                me.jumpState.maxTime = unitJumpTime;
             } else {
                 me.onLadder = false;
             }
@@ -179,8 +172,8 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
             getTile(game, x + half, y + uy) == Tile::JUMP_PAD) {
             me.jumpState.canJump = true;
             me.jumpState.canCancel = false;
-            me.jumpState.maxTime = game.properties.jumpPadJumpTime;
-            me.jumpState.speed = game.properties.jumpPadJumpSpeed;
+            me.jumpState.maxTime = jumpPadJumpTime;
+            me.jumpState.speed = jumpPadJumpSpeed;
             vy = me.jumpState.speed * alpha;
         }
 
@@ -188,7 +181,7 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
         auto& loot = game.lootBoxes;
         for (size_t i = 0; i < loot.size();) {
             auto& box = loot[i];
-            if (!intersects(me, box, game)) { i++; continue; }
+            if (!intersects(me, box)) { i++; continue; }
 
             auto weapon = dynamic_pointer_cast<Item::Weapon>(box.item);
             if (weapon && (!me.weapon || move.swapWeapon)) {
@@ -204,7 +197,7 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
 
         if (tick > 10 && (tick + game.currentTick) % 10 == 0) {
             auto coeff = 1.0f - tick * 1.0f / ticks;
-            drawUnit(me, game, ColorFloat(0.2f * coeff, 0.2f * coeff, 1.0f * coeff, 1.0), debug);
+            drawUnit(me, ColorFloat(0.2f * coeff, 0.2f * coeff, 1.0f * coeff, 1.0), debug);
         }
         if (tick == 0) {
             debug.log(string("next: ") + me.toString());
@@ -236,6 +229,7 @@ UnitAction MyStrategy::getAction(const Unit& me, const Game& game, Debug& debug)
             dumpConstants(game.properties);
             terminate();
         }
+        checkConstants(game.properties);
     }
 
     static auto moves = getRandomMoveSequence();
