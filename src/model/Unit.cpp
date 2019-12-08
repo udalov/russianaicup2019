@@ -30,7 +30,7 @@ string Unit::toString() const {
         // (stand ? "S" : ".") +
         // (onGround ? "G" : ".") +
         (onLadder ? "L" : ".") +
-        (weapon.has_value() ? " " + weapon->toString() : "");
+        (weapon.has_value() ? " {" + weapon->toString() + "}" : "");
 }
 Vec Unit::center() const {
     return position + Vec(0, unitSize.y / 2);

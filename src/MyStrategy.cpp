@@ -178,9 +178,18 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
                 me.onLadder = false;
             }
 
-            if (me.weapon.has_value()) {
-                me.weapon->fireTimer =
-                    (me.weapon->fireTimer.has_value() ? *(me.weapon->fireTimer) : me.weapon->params.reloadTime) - alpha;
+            auto& weapon = me.weapon;
+            if (weapon.has_value()) {
+                auto& wp = weapon->params;
+                weapon->fireTimer =
+                    (weapon->fireTimer.has_value() ? *weapon->fireTimer : wp.reloadTime) - alpha;
+                if (*weapon->fireTimer <= 0) {
+                    weapon->fireTimer = wp.fireRate;
+                    if (--weapon->magazine == 0) {
+                        weapon->magazine = wp.magazineSize;
+                        weapon->fireTimer = wp.reloadTime;
+                    }
+                }
             }
 
             if (closestLootBox != loot.end() && intersects(me, *closestLootBox)) {
