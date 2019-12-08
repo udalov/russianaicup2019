@@ -94,6 +94,13 @@ void dumpConstants(const Properties& p) {
                 }
             }
         };
+
+        if (wp.explosion.has_value()) {
+            a["weapon_params"][name]["explosion"] = {
+                { "radius", wp.explosion->radius },
+                { "damage", wp.explosion->damage },
+            };
+        }
     }
     cout << std::setw(4) << a << endl;
 }

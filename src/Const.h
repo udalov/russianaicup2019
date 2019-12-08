@@ -17,7 +17,7 @@ constexpr auto updatesPerTick = 100;
 
 constexpr auto pistolParams = WeaponParams(8, 0.4, 1.0, 0.05, 0.5, 0.5, 1.0, BulletParams(50.0, 0.2, 20), std::nullopt);
 constexpr auto assaultRifleParams = WeaponParams(20, 0.1, 1.0, 0.1, 0.5, 0.2, 1.9, BulletParams(50.0, 0.2, 5), std::nullopt);
-constexpr auto rocketLauncherParams = WeaponParams(1, 1.0, 1.0, 0.1, 0.5, 1.0, 1.0, BulletParams(20.0, 0.4, 30), std::nullopt /* TODO! */);
+constexpr auto rocketLauncherParams = WeaponParams(1, 1.0, 1.0, 0.1, 0.5, 1.0, 1.0, BulletParams(20.0, 0.4, 30), ExplosionParams(3.0, 50));
 
 void checkConstants(const Properties& properties);
 
