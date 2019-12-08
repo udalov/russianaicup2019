@@ -33,6 +33,11 @@ unique_ptr<vector<UnitAction>> getRandomMoveSequence() {
     for (size_t i = cp1; i < cp2; i++) ans->push_back(jump);
     for (size_t i = cp2; i < cp3; i++) ans->push_back(jumpAndMoveRight);
     for (size_t i = cp3; i < cp4; i++) ans->push_back(left);
+
+    for (auto& t : *ans) {
+        t.shoot = true;
+        t.aim = Vec(50, 42);
+    }
     return ans;
 }
 
@@ -66,8 +71,19 @@ bool isWallOrPlatform(const Game& game, double x, double y, bool jumpDown) {
 }
 
 bool intersects(const Unit& unit, const LootBox& box) {
-    return 2 * abs(unit.position.x - box.position.x) <= unitSize.x + lootBoxSize.x &&
-        2 * abs(unit.position.y + unitSize.y/2 - box.position.y) <= unitSize.y + lootBoxSize.y;
+    auto pos = unit.center();
+    return 2 * abs(pos.x - box.position.x) <= unitSize.x + lootBoxSize.x &&
+        2 * abs(pos.y + box.position.y) <= unitSize.y + lootBoxSize.y;
+}
+
+vector<LootBox> getReachableLootBoxes(const Unit& unit, const Game& game, size_t ticks) {
+    auto loot = game.lootBoxes;
+    auto v1 = unit.center();
+    loot.erase(remove_if(loot.begin(), loot.end(), [&v1, ticks](const auto& b) {
+        constexpr auto maxSpeed = 20.0 / ticksPerSecond;
+        return max(abs(v1.x-b.position.x), abs(v1.y-b.position.y)) > unitSize.y + lootBoxSize.y + maxSpeed * ticks;
+    }), loot.end());
+    return loot;
 }
 
 Unit prediction;
@@ -83,7 +99,12 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
     auto uy = unitSize.y;
     auto half = ux / 2;
 
+    auto loot = getReachableLootBoxes(me, game, ticks);
+
     for (size_t tick = 0; tick < ticks; tick++) {
+        auto closestLootBox = min_element(loot.begin(), loot.end(), [&me](const auto& b1, const auto& b2) {
+            return b1.position.sqrDist(me.center()) < b2.position.sqrDist(me.center());
+        });
         auto& move = moves[tick];
         auto vx = min(max(move.velocity, -unitMaxHorizontalSpeed), unitMaxHorizontalSpeed) * alpha;
         auto vy = 0.0;
@@ -156,6 +177,35 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
             } else {
                 me.onLadder = false;
             }
+
+            if (me.weapon.has_value()) {
+                me.weapon->fireTimer =
+                    (me.weapon->fireTimer.has_value() ? *(me.weapon->fireTimer) : me.weapon->params.reloadTime) - alpha;
+            }
+
+            if (closestLootBox != loot.end() && intersects(me, *closestLootBox)) {
+                if (closestLootBox->item.isWeapon() && (!me.weapon || move.swapWeapon)) {
+                    me.weapon = Weapon();
+                    me.weapon->type = closestLootBox->item.weaponType();
+                    WeaponParams params;
+                    switch (me.weapon->type) {
+                        case WeaponType::PISTOL: params = pistolParams; break;
+                        case WeaponType::ASSAULT_RIFLE: params = assaultRifleParams; break;
+                        case WeaponType::ROCKET_LAUNCHER: params = rocketLauncherParams; break;
+                    }
+                    me.weapon->params = params;
+                    me.weapon->magazine = params.magazineSize;
+                    me.weapon->spread = params.minSpread; // ???
+                    me.weapon->fireTimer = optional<double>(params.reloadTime);
+                    me.weapon->lastAngle = optional<double>(atan2(move.aim.y, move.aim.x));
+                }
+
+                size_t i = closestLootBox - loot.begin();
+                if (i + 1 != loot.size()) {
+                    swap(loot[i], loot.back());
+                }
+                loot.pop_back();
+            }
         }
 
         if (me.jumpState.maxTime <= -EPS) {
@@ -175,23 +225,6 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
             me.jumpState.maxTime = jumpPadJumpTime;
             me.jumpState.speed = jumpPadJumpSpeed;
             vy = me.jumpState.speed * alpha;
-        }
-
-        // TODO: optimize
-        auto& loot = game.lootBoxes;
-        for (size_t i = 0; i < loot.size();) {
-            auto& box = loot[i];
-            if (!intersects(me, box)) { i++; continue; }
-
-            if (box.item.isWeapon() && (!me.weapon || move.swapWeapon)) {
-                me.weapon = make_shared<Weapon>();
-                me.weapon->type = box.item.weaponType();
-            }
-
-            if (i + 1 == loot.size()) break; else {
-                swap(loot[i], loot.back());
-                loot.pop_back();
-            }
         }
 
         if (tick > 10 && (tick + game.currentTick) % 10 == 0) {

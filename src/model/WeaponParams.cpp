@@ -1,7 +1,8 @@
 #include "WeaponParams.hpp"
 
-WeaponParams::WeaponParams() { }
-WeaponParams::WeaponParams(int magazineSize, double fireRate, double reloadTime, double minSpread, double maxSpread, double recoil, double aimSpeed, BulletParams bullet, std::shared_ptr<ExplosionParams> explosion) : magazineSize(magazineSize), fireRate(fireRate), reloadTime(reloadTime), minSpread(minSpread), maxSpread(maxSpread), recoil(recoil), aimSpeed(aimSpeed), bullet(bullet), explosion(explosion) { }
+using namespace std;
+
+WeaponParams::WeaponParams() : magazineSize(), fireRate(), reloadTime(), minSpread(), maxSpread(), recoil(), aimSpeed(), bullet(), explosion() { }
 WeaponParams WeaponParams::readFrom(InputStream& stream) {
     WeaponParams result;
     result.magazineSize = stream.readInt();
@@ -12,13 +13,21 @@ WeaponParams WeaponParams::readFrom(InputStream& stream) {
     result.recoil = stream.readDouble();
     result.aimSpeed = stream.readDouble();
     result.bullet = BulletParams::readFrom(stream);
-    if (stream.readBool()) {
-        result.explosion = std::shared_ptr<ExplosionParams>(new ExplosionParams());
-        *result.explosion = ExplosionParams::readFrom(stream);
-    } else {
-        result.explosion = std::shared_ptr<ExplosionParams>();
-    }
+    result.explosion = stream.readBool() ? optional<ExplosionParams>(ExplosionParams::readFrom(stream)) : nullopt;
     return result;
+}
+bool WeaponParams::operator==(const WeaponParams& other) const {
+    return magazineSize == other.magazineSize &&
+        fireRate == other.fireRate &&
+        reloadTime == other.reloadTime &&
+        minSpread == other.minSpread &&
+        maxSpread == other.maxSpread &&
+        recoil == other.recoil &&
+        aimSpeed == other.aimSpeed &&
+        bullet.speed == other.bullet.speed &&
+        bullet.size == other.bullet.size &&
+        bullet.damage == other.bullet.damage &&
+        explosion == other.explosion;
 }
 std::string WeaponParams::toString() const {
     return std::string("WeaponParams") + "(" +

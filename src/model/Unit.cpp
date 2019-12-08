@@ -1,7 +1,11 @@
 #include "Unit.hpp"
 
-Unit::Unit() { }
-Unit::Unit(int playerId, int id, int health, Vec2Double position, Vec2Double size, JumpState jumpState, bool walkedRight, bool stand, bool onGround, bool onLadder, int mines, std::shared_ptr<Weapon> weapon) : playerId(playerId), id(id), health(health), position(position), size(size), jumpState(jumpState), walkedRight(walkedRight), stand(stand), onGround(onGround), onLadder(onLadder), mines(mines), weapon(weapon) { }
+#include "../Const.h"
+
+using namespace std;
+
+Unit::Unit(): playerId(), id(), health(), position(), size(), jumpState(), walkedRight(), stand(), onGround(), onLadder(), mines(), weapon() { }
+Unit::Unit(int playerId, int id, int health, Vec2Double position, Vec2Double size, JumpState jumpState, bool walkedRight, bool stand, bool onGround, bool onLadder, int mines, optional<Weapon> weapon) : playerId(playerId), id(id), health(health), position(position), size(size), jumpState(jumpState), walkedRight(walkedRight), stand(stand), onGround(onGround), onLadder(onLadder), mines(mines), weapon(weapon) { }
 Unit Unit::readFrom(InputStream& stream) {
     Unit result;
     result.playerId = stream.readInt();
@@ -15,21 +19,19 @@ Unit Unit::readFrom(InputStream& stream) {
     result.onGround = stream.readBool();
     result.onLadder = stream.readBool();
     result.mines = stream.readInt();
-    if (stream.readBool()) {
-        result.weapon = std::shared_ptr<Weapon>(new Weapon());
-        *result.weapon = Weapon::readFrom(stream);
-    } else {
-        result.weapon = std::shared_ptr<Weapon>();
-    }
+    result.weapon = stream.readBool() ? optional<Weapon>(Weapon::readFrom(stream)) : nullopt;
     return result;
 }
-std::string Unit::toString() const {
+string Unit::toString() const {
     return position.toString() + " " +
-        std::to_string(health) + " " +
+        to_string(health) + " " +
         jumpState.toString() + " " +
         // (walkedRight ? "R" : ".") +
         // (stand ? "S" : ".") +
         // (onGround ? "G" : ".") +
         (onLadder ? "L" : ".") +
-        (weapon ? " " + weapon->toString() : "");
+        (weapon.has_value() ? " " + weapon->toString() : "");
+}
+Vec Unit::center() const {
+    return position + Vec(0, unitSize.y / 2);
 }

@@ -10,7 +10,7 @@ public:
     double size;
     int damage;
     BulletParams();
-    BulletParams(double speed, double size, int damage);
+    constexpr BulletParams(double speed, double size, int damage) : speed(speed), size(size), damage(damage) { }
     static BulletParams readFrom(InputStream& stream);
     std::string toString() const;
 };

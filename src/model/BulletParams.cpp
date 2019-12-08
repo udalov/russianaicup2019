@@ -1,7 +1,6 @@
 #include "BulletParams.hpp"
 
 BulletParams::BulletParams() { }
-BulletParams::BulletParams(double speed, double size, int damage) : speed(speed), size(size), damage(damage) { }
 BulletParams BulletParams::readFrom(InputStream& stream) {
     BulletParams result;
     result.speed = stream.readDouble();
