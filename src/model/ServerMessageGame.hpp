@@ -2,15 +2,14 @@
 #define _MODEL_SERVER_MESSAGE_GAME_HPP_
 
 #include "../Stream.hpp"
-#include <string>
-#include <memory>
+#include <optional>
 #include "PlayerView.hpp"
 
 class ServerMessageGame {
 public:
-    std::shared_ptr<PlayerView> playerView;
+    std::optional<PlayerView> playerView;
     ServerMessageGame();
-    ServerMessageGame(std::shared_ptr<PlayerView> playerView);
+    ServerMessageGame(PlayerView&& playerView);
     static ServerMessageGame readFrom(InputStream& stream);
 };
 

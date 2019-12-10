@@ -2,7 +2,7 @@
 #define _MODEL_MINE_HPP_
 
 #include "../Stream.hpp"
-#include <memory>
+#include <optional>
 #include <string>
 #include "MineState.hpp"
 #include "ExplosionParams.hpp"
@@ -14,11 +14,11 @@ public:
     Vec2Double position;
     Vec2Double size;
     MineState state;
-    std::shared_ptr<double> timer;
+    std::optional<double> timer;
     double triggerRadius;
     ExplosionParams explosionParams;
     Mine();
-    Mine(int playerId, Vec2Double position, Vec2Double size, MineState state, std::shared_ptr<double> timer, double triggerRadius, ExplosionParams explosionParams);
+    Mine(int playerId, Vec2Double position, Vec2Double size, MineState state, std::optional<double> timer, double triggerRadius, ExplosionParams explosionParams);
     static Mine readFrom(InputStream& stream);
     std::string toString() const;
 };

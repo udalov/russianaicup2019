@@ -21,7 +21,7 @@ void run(int port, unordered_map<string, string>&& params) {
     while (true) {
         auto message = ServerMessageGame::readFrom(*inputStream);
         const auto& playerView = message.playerView;
-        if (!playerView) break;
+        if (!playerView.has_value()) break;
         unordered_map<int, UnitAction> actions;
         for (const Unit& unit : playerView->game.world.units) {
             if (unit.playerId == playerView->myId) {
