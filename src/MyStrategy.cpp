@@ -1,6 +1,7 @@
 #include "MyStrategy.hpp"
 
 #include <iostream>
+#include <numeric>
 #include <vector>
 #include "Const.h"
 #include "util.h"
@@ -120,7 +121,7 @@ vector<LootBox> getReachableLootBoxes(const Unit& unit, const Game& game, size_t
 
 pair<int, Game> simulationPrediction;
 
-void simulate(int myId, Game game, const vector<UnitAction>& moves, Debug *debug, int updatesPerTick, size_t ticks) {
+void simulate(int myId, Game& game, const vector<UnitAction>& moves, Debug *debug, int updatesPerTick, size_t ticks) {
     auto& me = findUnit(game, myId);
     auto alpha = 1.0 / ticksPerSecond / updatesPerTick;
 
@@ -371,15 +372,59 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
         cout << "TOTAL ERRORS: " << simulationErrors << endl;
     }
 
-    simulate(myId, game, *moves, &debug, microticks, 300);
+    auto newGame = game;
+    simulate(myId, newGame, *moves, &debug, microticks, 300);
     ans = *moves->begin();
     moves->erase(moves->begin());
     return ans;
 }
 
+typedef vector<UnitAction> Track;
+
+vector<Track> generateTracks(size_t len) {
+    vector<Track> ans;
+    Track t(len);
+    ans.push_back(t);
+    for (size_t i = 0; i < len; i++) t[i].velocity = 10.0; ans.push_back(t);
+    for (size_t i = 0; i < len; i++) t[i].velocity = -10.0; ans.push_back(t);
+    for (size_t i = 0; i < len; i++) t[i].velocity = 0.0, t[i].jump = true; ans.push_back(t);
+    for (size_t i = 0; i < len; i++) t[i].velocity = 10.0, t[i].jump = true; ans.push_back(t);
+    for (size_t i = 0; i < len; i++) t[i].velocity = -10.0, t[i].jump = true; ans.push_back(t);
+    for (size_t i = 0; i < len; i++) t[i].velocity = 0.0, t[i].jump = false, t[i].jumpDown = true; ans.push_back(t);
+    for (size_t i = 0; i < len; i++) t[i].velocity = 10.0, t[i].jump = false, t[i].jumpDown = true; ans.push_back(t);
+    for (size_t i = 0; i < len; i++) t[i].velocity = -10.0, t[i].jump = false, t[i].jumpDown = true; ans.push_back(t);
+
+    for (size_t times = 0; times < 100; times++) {
+        size_t t1 = rand() % ans.size();
+        size_t t2;
+        do {
+            t2 = rand() % ans.size();
+        } while (t1 == t2);
+        size_t mid = rand() % len;
+        copy(ans[t1].begin(), ans[t1].begin() + mid, t.begin());
+        copy(ans[t2].begin() + mid, ans[t2].end(), t.begin() + mid);
+        ans.push_back(t);
+    }
+    return ans;
+}
+
+double estimate(const Game& game, int myId, const Unit *nearestEnemy, const LootBox *nearestWeapon) {
+    auto& me = findUnit(game, myId);
+    auto score = me.health * 100;
+    if (!me.weapon) {
+        score += -100.0 - me.position.distance(nearestWeapon->position);
+    } else {
+        score += -10.0 - abs(me.position.distance(nearestEnemy->position) - 10.0);
+    }
+    return score;
+}
+
+vector<Track> savedTracks;
+
 UnitAction MyStrategy::getAction(const Unit& me, const Game& game, Debug& debug) {
     auto tick = game.currentTick;
     if (tick == 0) {
+        srand(42);
         if (params.find("--dump-constants") != params.end()) {
             dumpConstants(game.properties);
             terminate();
@@ -388,9 +433,45 @@ UnitAction MyStrategy::getAction(const Unit& me, const Game& game, Debug& debug)
         simulation = params.find("--simulate") != params.end();
     }
 
-    if (simulation) return checkSimulation(me.id, game, debug);
+    auto myId = me.id;
+    if (simulation) return checkSimulation(myId, game, debug);
 
-    return UnitAction();
+    auto nearestEnemy = minBy(game.units, [&me](const auto& other) {
+        return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
+    });
+    auto nearestWeapon = minBy(game.lootBoxes, [&me](const auto& lootBox) {
+        return lootBox.item.isWeapon() ? me.position.sqrDist(lootBox.position) : 1e100;
+    });
+
+    constexpr size_t trackLen = 80;
+    constexpr size_t tracksToSave = 10;
+    constexpr size_t microticks = 4;
+
+    auto tracks = generateTracks(trackLen);
+    for (auto& track : savedTracks) track.push_back(track.back()), tracks.push_back(track);
+    savedTracks.clear();
+
+    auto scores = vector<double>(tracks.size());
+    for (size_t i = 0; i < tracks.size(); i++) {
+        auto& track = tracks[i];
+        auto g = game;
+        simulate(myId, g, track, nullptr, microticks, min(track.size(), trackLen));
+        scores[i] = estimate(g, myId, nearestEnemy, nearestWeapon);
+    }
+
+    auto indices = vector<size_t>(tracks.size());
+    iota(indices.begin(), indices.end(), 0);
+
+    sort(indices.begin(), indices.end(), [&scores](auto& i1, auto& i2) { return scores[i1] > scores[i2]; });
+
+    for (size_t i = 0; i < tracksToSave && i < tracks.size(); i++) savedTracks.push_back(tracks[indices[i]]);
+
+    auto ans = tracks.empty() ? UnitAction() : tracks[indices.front()].front();
+    // cout << tick << " " << ans.toString() << endl;
+    // cout << tick << " " << me.toString() << endl;
+    ans.aim = nearestEnemy->position - me.position;
+    ans.shoot = true;
+    return ans;
     /*
     auto nearestEnemy = minBy(game.units, [&me](auto& other) {
         return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;

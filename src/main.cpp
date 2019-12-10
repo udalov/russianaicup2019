@@ -3,6 +3,8 @@
 #include "TcpStream.hpp"
 #include "model/PlayerMessageGame.hpp"
 #include "model/ServerMessageGame.hpp"
+#include <ctime>
+#include <iostream>
 #include <string>
 #include <unordered_map>
 
@@ -42,6 +44,13 @@ int main(int argc, char *argv[]) {
             params[arg] = "";
         }
     }
+
+    auto begin = clock();
     run(port, move(params));
+    auto end = clock();
+    if (params.find("--time") != params.end()) {
+        cerr << (end - begin) * 1.0 / CLOCKS_PER_SEC << "s" << endl;
+    }
+
     return 0;
 }
