@@ -55,9 +55,20 @@ Tile getTile(const Game& game, double x, double y) {
     return getTile(game.level, x, y);
 }
 
+void drawRect(Vec corner, Vec size, const ColorFloat& color, Debug& debug) {
+    debug.draw(CustomData::Rect(corner, size, color));
+}
+
 void drawUnit(const Unit& unit, const ColorFloat& color, Debug& debug) {
-    auto corner = unit.position - Vec(unitSize.x / 2, 0);
-    debug.draw(CustomData::Rect(corner, unitSize, color));
+    drawRect(unit.position - Vec(unitSize.x / 2, 0), unitSize, color, debug);
+}
+
+void drawBullet(const Bullet& bullet, const ColorFloat& color, Debug& debug) {
+    auto size =
+        bullet.weaponType == WeaponType::ROCKET_LAUNCHER ? rocketLauncherParams.bullet.size :
+        bullet.weaponType == WeaponType::ASSAULT_RIFLE ? assaultRifleParams.bullet.size :
+        bullet.weaponType == WeaponType::PISTOL ? pistolParams.bullet.size : 100.0;
+    drawRect(bullet.position - Vec(size / 2, size / 2), Vec(size, size), color, debug);
 }
 
 bool isWall(const Game& game, double x, double y) {
@@ -70,25 +81,39 @@ bool isWallOrPlatform(const Game& game, double x, double y, bool jumpDown) {
     return tile == Tile::WALL || tile == Tile::LADDER || (!jumpDown && tile == Tile::PLATFORM);
 }
 
-bool intersects(const Unit& unit, const LootBox& box) {
+bool intersects(const Unit& unit, const Vec& smth, double sizeX, double sizeY) {
     auto pos = unit.center();
-    return 2 * abs(pos.x - box.position.x) <= unitSize.x + lootBoxSize.x &&
-        2 * abs(pos.y + box.position.y) <= unitSize.y + lootBoxSize.y;
+    return 2 * abs(pos.x - smth.x) <= unitSize.x + sizeX &&
+        2 * abs(pos.y - smth.y) <= unitSize.y + sizeY;
+}
+
+bool intersects(const Unit& unit, const LootBox& box) {
+    return intersects(unit, box.position, lootBoxSize.x, lootBoxSize.y);
+}
+
+bool intersectsEnemyBullet(const Unit& unit, const Bullet& bullet) {
+    constexpr auto eps = 1e-8;
+    return intersects(unit, bullet.position, bullet.size + eps, bullet.size + eps);
 }
 
 vector<LootBox> getReachableLootBoxes(const Unit& unit, const Game& game, size_t ticks) {
     auto loot = game.lootBoxes;
-    auto v1 = unit.center();
-    loot.erase(remove_if(loot.begin(), loot.end(), [&v1, ticks](const auto& b) {
-        constexpr auto maxSpeed = 20.0 / ticksPerSecond;
-        return max(abs(v1.x-b.position.x), abs(v1.y-b.position.y)) > unitSize.y + lootBoxSize.y + maxSpeed * ticks;
+    auto v = unit.center();
+    constexpr auto closenessX = unitSize.x + lootBoxSize.x;
+    constexpr auto closenessY = unitSize.y + lootBoxSize.y;
+    loot.erase(remove_if(loot.begin(), loot.end(), [&v, ticks](const auto& b) {
+        constexpr auto maxSpeedX = 10.0 / ticksPerSecond;
+        constexpr auto maxSpeedY = 20.0 / ticksPerSecond;
+        return abs(v.x - b.position.x) > (unitSize.x + lootBoxSize.x) / 2 + maxSpeedX * ticks + EPS &&
+            abs(v.y - b.position.y) > (unitSize.y + lootBoxSize.y) / 2 + maxSpeedY * ticks + EPS;
     }), loot.end());
     return loot;
 }
 
-Unit prediction;
+pair<int, Game> prediction;
 
-void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug, size_t ticks) {
+void simulate(int myId, Game game, const vector<UnitAction>& moves, Debug& debug, size_t ticks) {
+    auto& me = *find_if(game.units.begin(), game.units.end(), [myId](const auto& unit) { return unit.id == myId; });
     auto alpha = 1.0 / ticksPerSecond / updatesPerTick;
 
     debug.log(string("cur: ") + me.toString());
@@ -125,6 +150,29 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
         }
 
         for (size_t mt = 0; mt < updatesPerTick; mt++) {
+            for (size_t i = 0; i < game.bullets.size();) {
+                auto& bullet = game.bullets[i];
+                // Only simulate enemy bullets for now.
+                if (bullet.playerId == me.playerId) { i++; continue; }
+
+                bullet.position += bullet.velocity * alpha;
+                auto bx = bullet.position.x;
+                auto by = bullet.position.y;
+
+                auto s = bullet.size / 2;
+                if (isWall(game, bx - s, by - s) || isWall(game, bx - s, by + s) ||
+                    isWall(game, bx + s, by - s) || isWall(game, bx + s, by + s)) {
+                    swap(bullet, game.bullets.back());
+                    game.bullets.pop_back();
+                } else if (intersectsEnemyBullet(me, bullet)) {
+                    me.health -= bullet.damage;
+                    swap(bullet, game.bullets.back());
+                    game.bullets.pop_back();
+                } else {
+                    i++;
+                }
+            }
+
             if (!me.onLadder && me.jumpState.canJump && me.jumpState.maxTime >= -EPS &&
                 (move.jump || !me.jumpState.canCancel)) {
                 me.jumpState.maxTime -= alpha;
@@ -240,9 +288,17 @@ void simulate(Unit me, Game game, const vector<UnitAction>& moves, Debug& debug,
             auto coeff = 1.0f - tick * 1.0f / ticks;
             drawUnit(me, ColorFloat(0.2f * coeff, 0.2f * coeff, 1.0f * coeff, 1.0), debug);
         }
+        if (tick > 0 && (tick + game.currentTick) % 5 == 0) {
+            auto coeff = 1.0f - tick * 1.0f / ticks;
+            for (auto& bullet : game.bullets) {
+                if (bullet.playerId != me.playerId) {
+                    drawBullet(bullet, ColorFloat(0.7f * coeff, 0.2f * coeff, 0.1f * coeff, 0.8), debug);
+                }
+            }
+        }
         if (tick == 0) {
             debug.log(string("next: ") + me.toString());
-            prediction = me;
+            prediction = make_pair(me.id, game);
         }
     }
 }
@@ -257,6 +313,20 @@ string surroundingToString(const Vec& v, const Level& level) {
             ans += tileToChar(tile);
         }
         ans += "\n";
+    }
+    return ans;
+}
+
+string renderWorld(const pair<int, Game>& world) {
+    auto myId = world.first;
+    auto& game = world.second;
+    auto me = *find_if(game.units.begin(), game.units.end(), [myId](const auto& unit) { return unit.id == myId; });
+    string ans = me.toString();
+    for (auto& bullet : game.bullets) {
+        // Only render enemy bullets for now.
+        if (bullet.playerId != me.playerId) {
+            ans += "\n  " + bullet.toString();
+        }
     }
     return ans;
 }
@@ -277,17 +347,25 @@ UnitAction MyStrategy::getAction(const Unit& me, const Game& game, Debug& debug)
     UnitAction ans;
     if (moves->empty()) return ans;
 
-    cout << tick << " " << me.toString() << endl;
-    if (tick != 0 && prediction.toString() != me.toString()) {
-        cout << "ERROR! predicted:" << endl << tick << " " << prediction.toString() << endl;
-        cout << surroundingToString(me.position, game.level);
-        errors++;
+    if (tick != 0) {
+        auto actual = renderWorld(make_pair(me.id, game));
+        auto expected = renderWorld(prediction);
+        cout << tick << " " << actual << endl;
+        if (expected != actual) {
+            cout << "ERROR! predicted:" << endl << tick << " " << expected << endl;
+            if (expected.substr(0, expected.find("\n")) != actual.substr(0, actual.find("\n"))) {
+                cout << surroundingToString(me.position, game.level);
+            } else {
+                cout << endl;
+            }
+            errors++;
+        }
     }
     if (tick == game.properties.maxTickCount - 1) {
         cout << "TOTAL ERRORS: " << errors << endl;
     }
 
-    simulate(me, game, *moves, debug, 300);
+    simulate(me.id, game, *moves, debug, 300);
     ans = *moves->begin();
     moves->erase(moves->begin());
     return ans;

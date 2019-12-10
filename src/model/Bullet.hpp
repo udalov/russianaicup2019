@@ -2,7 +2,7 @@
 #define _MODEL_BULLET_HPP_
 
 #include "../Stream.hpp"
-#include <memory>
+#include <optional>
 #include <string>
 #include "WeaponType.hpp"
 #include "ExplosionParams.hpp"
@@ -17,9 +17,9 @@ public:
     Vec2Double velocity;
     int damage;
     double size;
-    std::shared_ptr<ExplosionParams> explosionParams;
+    std::optional<ExplosionParams> explosionParams;
     Bullet();
-    Bullet(WeaponType weaponType, int unitId, int playerId, Vec2Double position, Vec2Double velocity, int damage, double size, std::shared_ptr<ExplosionParams> explosionParams);
+    Bullet(WeaponType weaponType, int unitId, int playerId, Vec2Double position, Vec2Double velocity, int damage, double size, std::optional<ExplosionParams> explosionParams);
     static Bullet readFrom(InputStream& stream);
     std::string toString() const;
 };

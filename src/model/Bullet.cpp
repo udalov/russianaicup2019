@@ -1,7 +1,9 @@
 #include "Bullet.hpp"
 
+using namespace std;
+
 Bullet::Bullet() { }
-Bullet::Bullet(WeaponType weaponType, int unitId, int playerId, Vec2Double position, Vec2Double velocity, int damage, double size, std::shared_ptr<ExplosionParams> explosionParams) : weaponType(weaponType), unitId(unitId), playerId(playerId), position(position), velocity(velocity), damage(damage), size(size), explosionParams(explosionParams) { }
+Bullet::Bullet(WeaponType weaponType, int unitId, int playerId, Vec2Double position, Vec2Double velocity, int damage, double size, optional<ExplosionParams> explosionParams) : weaponType(weaponType), unitId(unitId), playerId(playerId), position(position), velocity(velocity), damage(damage), size(size), explosionParams(explosionParams) { }
 Bullet Bullet::readFrom(InputStream& stream) {
     Bullet result;
     switch (stream.readInt()) {
@@ -15,7 +17,7 @@ Bullet Bullet::readFrom(InputStream& stream) {
         result.weaponType = WeaponType::ROCKET_LAUNCHER;
         break;
     default:
-        throw std::runtime_error("Unexpected discriminant value");
+        throw runtime_error("Unexpected discriminant value");
     }
     result.unitId = stream.readInt();
     result.playerId = stream.readInt();
@@ -23,23 +25,9 @@ Bullet Bullet::readFrom(InputStream& stream) {
     result.velocity = Vec2Double::readFrom(stream);
     result.damage = stream.readInt();
     result.size = stream.readDouble();
-    if (stream.readBool()) {
-        result.explosionParams = std::shared_ptr<ExplosionParams>(new ExplosionParams());
-        *result.explosionParams = ExplosionParams::readFrom(stream);
-    } else {
-        result.explosionParams = std::shared_ptr<ExplosionParams>();
-    }
+    result.explosionParams = stream.readBool() ? optional<ExplosionParams>(ExplosionParams::readFrom(stream)) : nullopt;
     return result;
 }
-std::string Bullet::toString() const {
-    return std::string("Bullet") + "(" +
-        "TODO" + 
-        std::to_string(unitId) +
-        std::to_string(playerId) +
-        position.toString() +
-        velocity.toString() +
-        std::to_string(damage) +
-        std::to_string(size) +
-        "TODO" + 
-        ")";
+string Bullet::toString() const {
+    return string("[") + weaponTypeToString(weaponType) + " " + position.toString() + " v=" + velocity.toString() + "]";
 }
