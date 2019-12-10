@@ -2,6 +2,14 @@
 
 import json, sys
 
+# Args:
+# 1) First player
+# 2) Second player
+# 3) Path to the level, or "Simple"
+# 4) Seed
+# 5) Optional: max tick count
+# 6) Optional: other arguments, e.g. "--custom-properties"
+
 port = 31001
 
 def createLocal():
@@ -31,7 +39,7 @@ seed = int(sys.argv[4])
 args = sys.argv[5:]
 if "--custom-properties" in args:
     properties = json.load(open("scripts/properties.json", "r"))
-    properties["max_tick_count"] = 1000
+    properties["max_tick_count"] = int(args[0])
     # properties["ticks_per_second"] = 6000
     # properties["updates_per_tick"] = 1
 else:
