@@ -62,6 +62,8 @@ for i in range(1, 3):
     arg = sys.argv[i]
     if arg == "Quick":
         players.append("Quickstart")
+    elif arg == "Keyboard":
+        players.append("Keyboard")
     elif arg == "Empty":
         players.append({"Empty": None})
     elif arg == "Local":

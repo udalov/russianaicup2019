@@ -3,6 +3,9 @@
 set -e
 trap "kill 0" EXIT
 
+PLAYER1=Local
+PLAYER2=Quick
+
 NOVIS=--batch-mode
 SEED=
 LEN=
@@ -33,10 +36,23 @@ then
     LEN=3600
 fi
 
+port=31001
+
 make -Cout -j4
-scripts/create-config.py Local Quick levels/level.txt $SEED $LEN --custom-properties >out/config.json
-out/aicup2019 $ARGS &
-./aicup2019 $NOVIS --log-level ERROR --config out/config.json --save-results out/result.txt
+scripts/create-config.py $PLAYER1 $PLAYER2 Simple $SEED $LEN --custom-properties >out/config.json
+
+if [ "$PLAYER1" == "Local" ]
+then
+    out/aicup2019 $port $ARGS &
+    port=$((port + 1))
+fi
+
+if [ "$PLAYER2" == "Local" ]
+then
+    out/aicup2019 $port $ARGS &
+fi
+
+./aicup2019 $NOVIS --log-level ERROR --config out/config.json --save-results out/result.txt --player-names $PLAYER1 $PLAYER2
 test -s out/result.txt && scripts/parse-result.py
 
 wait
