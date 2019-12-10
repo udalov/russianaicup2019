@@ -11,7 +11,7 @@ const double EPS = 1e-9;
 
 MyStrategy::MyStrategy(unordered_map<string, string>&& params): params(params) {}
 
-unique_ptr<vector<UnitAction>> getRandomMoveSequence() {
+unique_ptr<vector<UnitAction>> getRandomMoveSequence(int updatesPerTick) {
     auto ans = make_unique<vector<UnitAction>>();
     UnitAction moveRight;
     moveRight.velocity = 100.0;
@@ -96,6 +96,14 @@ bool intersectsEnemyBullet(const Unit& unit, const Bullet& bullet) {
     return intersects(unit, bullet.position, bullet.size + eps, bullet.size + eps);
 }
 
+Unit& findUnit(Game& game, int id) {
+    return *find_if(game.units.begin(), game.units.end(), [id](const auto& unit) { return unit.id == id; });
+}
+
+const Unit& findUnit(const Game& game, int id) {
+    return static_cast<const Unit&>(findUnit(const_cast<Game&>(game), id));
+}
+
 vector<LootBox> getReachableLootBoxes(const Unit& unit, const Game& game, size_t ticks) {
     auto loot = game.lootBoxes;
     auto v = unit.center();
@@ -110,13 +118,15 @@ vector<LootBox> getReachableLootBoxes(const Unit& unit, const Game& game, size_t
     return loot;
 }
 
-pair<int, Game> prediction;
+pair<int, Game> simulationPrediction;
 
-void simulate(int myId, Game game, const vector<UnitAction>& moves, Debug& debug, size_t ticks) {
-    auto& me = *find_if(game.units.begin(), game.units.end(), [myId](const auto& unit) { return unit.id == myId; });
+void simulate(int myId, Game game, const vector<UnitAction>& moves, Debug *debug, int updatesPerTick, size_t ticks) {
+    auto& me = findUnit(game, myId);
     auto alpha = 1.0 / ticksPerSecond / updatesPerTick;
 
-    debug.log(string("cur: ") + me.toString());
+    if (debug) {
+        debug->log(string("cur: ") + me.toString());
+    }
 
     auto& x = me.position.x;
     auto& y = me.position.y;
@@ -284,21 +294,23 @@ void simulate(int myId, Game game, const vector<UnitAction>& moves, Debug& debug
             vy = me.jumpState.speed * alpha;
         }
 
-        if (tick > 10 && (tick + game.currentTick) % 10 == 0) {
-            auto coeff = 1.0f - tick * 1.0f / ticks;
-            drawUnit(me, ColorFloat(0.2f * coeff, 0.2f * coeff, 1.0f * coeff, 1.0), debug);
-        }
-        if (tick > 0 && (tick + game.currentTick) % 5 == 0) {
-            auto coeff = 1.0f - tick * 1.0f / ticks;
-            for (auto& bullet : game.bullets) {
-                if (bullet.playerId != me.playerId) {
-                    drawBullet(bullet, ColorFloat(0.7f * coeff, 0.2f * coeff, 0.1f * coeff, 0.8), debug);
+        if (debug) {
+            if (tick > 10 && (tick + game.currentTick) % 10 == 0) {
+                auto coeff = 1.0f - tick * 1.0f / ticks;
+                drawUnit(me, ColorFloat(0.2f * coeff, 0.2f * coeff, 1.0f * coeff, 1.0), *debug);
+            }
+            if (tick > 0 && (tick + game.currentTick) % 5 == 0) {
+                auto coeff = 1.0f - tick * 1.0f / ticks;
+                for (auto& bullet : game.bullets) {
+                    if (bullet.playerId != me.playerId) {
+                        drawBullet(bullet, ColorFloat(0.7f * coeff, 0.2f * coeff, 0.1f * coeff, 0.8), *debug);
+                    }
                 }
             }
-        }
-        if (tick == 0) {
-            debug.log(string("next: ") + me.toString());
-            prediction = make_pair(me.id, game);
+            if (tick == 0) {
+                debug->log(string("next: ") + me.toString());
+                simulationPrediction = make_pair(me.id, game);
+            }
         }
     }
 }
@@ -318,9 +330,8 @@ string surroundingToString(const Vec& v, const Level& level) {
 }
 
 string renderWorld(const pair<int, Game>& world) {
-    auto myId = world.first;
     auto& game = world.second;
-    auto me = *find_if(game.units.begin(), game.units.end(), [myId](const auto& unit) { return unit.id == myId; });
+    auto me = findUnit(game, world.first);
     string ans = me.toString();
     for (auto& bullet : game.bullets) {
         // Only render enemy bullets for now.
@@ -331,7 +342,40 @@ string renderWorld(const pair<int, Game>& world) {
     return ans;
 }
 
-int errors = 0;
+bool simulation = false;
+int simulationErrors = 0;
+
+UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
+    auto microticks = updatesPerTick;
+    static auto moves = getRandomMoveSequence(microticks);
+    UnitAction ans;
+    if (moves->empty()) return ans;
+
+    auto tick = game.currentTick;
+    if (tick != 0) {
+        auto actual = renderWorld(make_pair(myId, game));
+        auto expected = renderWorld(simulationPrediction);
+        cout << tick << " " << actual << endl;
+        if (expected != actual) {
+            cout << "ERROR! predicted:" << endl << tick << " " << expected << endl;
+            if (expected.substr(0, expected.find("\n")) != actual.substr(0, actual.find("\n"))) {
+                auto& me = findUnit(game, myId);
+                cout << surroundingToString(me.position, game.level);
+            } else {
+                cout << endl;
+            }
+            simulationErrors++;
+        }
+    }
+    if (tick == game.properties.maxTickCount - 1) {
+        cout << "TOTAL ERRORS: " << simulationErrors << endl;
+    }
+
+    simulate(myId, game, *moves, &debug, microticks, 300);
+    ans = *moves->begin();
+    moves->erase(moves->begin());
+    return ans;
+}
 
 UnitAction MyStrategy::getAction(const Unit& me, const Game& game, Debug& debug) {
     auto tick = game.currentTick;
@@ -341,34 +385,12 @@ UnitAction MyStrategy::getAction(const Unit& me, const Game& game, Debug& debug)
             terminate();
         }
         checkConstants(game.properties);
+        simulation = params.find("--simulate") != params.end();
     }
 
-    static auto moves = getRandomMoveSequence();
-    UnitAction ans;
-    if (moves->empty()) return ans;
+    if (simulation) return checkSimulation(me.id, game, debug);
 
-    if (tick != 0) {
-        auto actual = renderWorld(make_pair(me.id, game));
-        auto expected = renderWorld(prediction);
-        cout << tick << " " << actual << endl;
-        if (expected != actual) {
-            cout << "ERROR! predicted:" << endl << tick << " " << expected << endl;
-            if (expected.substr(0, expected.find("\n")) != actual.substr(0, actual.find("\n"))) {
-                cout << surroundingToString(me.position, game.level);
-            } else {
-                cout << endl;
-            }
-            errors++;
-        }
-    }
-    if (tick == game.properties.maxTickCount - 1) {
-        cout << "TOTAL ERRORS: " << errors << endl;
-    }
-
-    simulate(me.id, game, *moves, debug, 300);
-    ans = *moves->begin();
-    moves->erase(moves->begin());
-    return ans;
+    return UnitAction();
     /*
     auto nearestEnemy = minBy(game.units, [&me](auto& other) {
         return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
