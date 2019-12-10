@@ -12,7 +12,7 @@
 class MyStrategy {
 public:
     MyStrategy(std::unordered_map<std::string, std::string>&& params);
-    UnitAction getAction(const Unit &unit, const Game &game, Debug &debug);
+    UnitAction getAction(int myId, const Game& game, Debug& debug);
 private:
     std::unordered_map<std::string, std::string> params;
 };

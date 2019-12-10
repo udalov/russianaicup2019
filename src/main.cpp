@@ -23,9 +23,9 @@ void run(int port, unordered_map<string, string>&& params) {
         const auto& playerView = message.playerView;
         if (!playerView) break;
         unordered_map<int, UnitAction> actions;
-        for (const Unit& unit : playerView->game.units) {
+        for (const Unit& unit : playerView->game.world.units) {
             if (unit.playerId == playerView->myId) {
-                actions.emplace(unit.id, myStrategy.getAction(unit, playerView->game, debug));
+                actions.emplace(unit.id, myStrategy.getAction(unit.id, playerView->game, debug));
             }
         }
         PlayerMessageGame::ActionMessage(actions).writeTo(*outputStream);
