@@ -13,7 +13,7 @@ endif()
 
 file(GLOB HEADERS "*.h" "*.hpp" "model/*.h" "model/*.hpp")
 set_source_files_properties(${HEADERS} PROPERTIES HEADER_FILE_ONLY TRUE)
-file(GLOB SRC "*.cpp" "model/*.cpp" "csimplesocket/*.cpp")
+file(GLOB SRC "*.cpp" "model/*.cpp")
 add_executable(aicup2019 ${HEADERS} ${SRC})
 target_link_libraries(aicup2019 ${PROJECT_LIBS})
 target_compile_options(aicup2019 PRIVATE -Wno-inconsistent-missing-override)
