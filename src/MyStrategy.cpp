@@ -10,7 +10,8 @@ using namespace std;
 
 const double EPS = 1e-9;
 
-MyStrategy::MyStrategy(unordered_map<string, string>&& params): params(params) {}
+MyStrategy::MyStrategy() : params() {}
+MyStrategy::MyStrategy(unordered_map<string, string>&& params) : params(params) {}
 
 unique_ptr<vector<UnitAction>> getRandomMoveSequence(int updatesPerTick) {
     auto ans = make_unique<vector<UnitAction>>();
@@ -40,6 +41,10 @@ unique_ptr<vector<UnitAction>> getRandomMoveSequence(int updatesPerTick) {
         t.aim = Vec(50, 42);
     }
     return ans;
+}
+
+void log(Debug& debug, const string& message) {
+    debug.draw(CustomData::Log(message));
 }
 
 Tile getTile(const Level& level, double x, double y) {
@@ -122,7 +127,7 @@ void simulate(int myId, const Level& level, World& world, int currentTick, const
     auto alpha = 1.0 / ticksPerSecond / updatesPerTick;
 
     if (debug) {
-        debug->log(string("cur: ") + me.toString());
+        log(*debug, string("cur: ") + me.toString());
     }
 
     auto& x = me.position.x;
@@ -305,7 +310,7 @@ void simulate(int myId, const Level& level, World& world, int currentTick, const
                 }
             }
             if (tick == 0) {
-                debug->log(string("next: ") + me.toString());
+                log(*debug, string("next: ") + me.toString());
                 simulationPrediction = make_pair(me.id, world);
             }
         }
@@ -417,7 +422,7 @@ double estimate(const World& world, int myId, const Unit *nearestEnemy, const Lo
 
 vector<Track> savedTracks;
 
-UnitAction MyStrategy::getAction(int myId, const Game& game, Debug& debug) {
+UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& debug) {
     auto tick = game.currentTick;
     if (tick == 0) {
         srand(42);
@@ -429,6 +434,7 @@ UnitAction MyStrategy::getAction(int myId, const Game& game, Debug& debug) {
         simulation = params.find("--simulate") != params.end();
     }
 
+    auto myId = myUnit.id;
     auto& me = findUnit(game.world, myId);
     if (simulation) return checkSimulation(myId, game, debug);
 
@@ -481,8 +487,8 @@ UnitAction MyStrategy::getAction(int myId, const Game& game, Debug& debug) {
     } else if (nearestEnemy != nullptr) {
         target = nearestEnemy->position;
     }
-    debug.log(string("Me: ") + me.position.toString());
-    debug.log(string("Target: ") + target.toString());
+    log(debug, string("Me: ") + me.position.toString());
+    log(debug, string("Target: ") + target.toString());
     Vec aim;
     if (nearestEnemy != nullptr) {
         aim = Vec(nearestEnemy->position.x - me.position.x, nearestEnemy->position.y - me.position.y);
