@@ -2,7 +2,7 @@
 
 using namespace std;
 
-ServerMessageGame::ServerMessageGame() { }
+ServerMessageGame::ServerMessageGame() : playerView(nullopt) { }
 ServerMessageGame::ServerMessageGame(PlayerView&& playerView) : playerView(playerView) { }
 ServerMessageGame ServerMessageGame::readFrom(InputStream& stream) {
     return stream.readBool()

@@ -2,8 +2,10 @@
 
 shopt -s globstar
 
+target=$(realpath out/solution.zip)
+
+mkdir -p $(dirname target)
 cd src
 
-mkdir -p ../out
-rm -rf cmake-build-debug ../out/solution.zip
-zip ../out/solution.zip **/*.cpp **/*.hpp **/*.h CMakeLists.txt
+rm -rf cmake-build-debug $target
+zip $target **/*.cpp **/*.hpp **/*.h CMakeLists.txt

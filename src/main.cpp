@@ -10,11 +10,11 @@
 
 using namespace std;
 
-void run(int port, unordered_map<string, string>&& params) {
-    auto tcpStream = TcpStream("127.0.0.1", port);
+void run(const string& host, int port, const string& token, unordered_map<string, string>&& params) {
+    auto tcpStream = TcpStream(host, port);
     auto inputStream = getInputStream(&tcpStream);
     auto outputStream = getOutputStream(&tcpStream);
-    outputStream->write(string("0000000000000000"));
+    outputStream->write(token);
     outputStream->flush();
     MyStrategy myStrategy(move(params));
     Debug debug(*outputStream);
@@ -28,25 +28,37 @@ void run(int port, unordered_map<string, string>&& params) {
                 actions.emplace(unit.id, myStrategy.getAction(unit.id, playerView->game, debug));
             }
         }
-        PlayerMessageGame::ActionMessage(actions).writeTo(*outputStream);
+        PlayerMessageGame::ActionMessage(Versioned(actions)).writeTo(*outputStream);
         outputStream->flush();
     }
 }
 
 int main(int argc, char *argv[]) {
     unordered_map<string, string> params;
-    int port = 31001;
+    string host = "";
+    int port = -1;
+    string token = "";
     for (int i = 1; i < argc; i++) {
-        auto arg = string(argv[i]);
-        if (arg[0] != '-') {
-            port = stoi(arg);
-        } else {
+        string arg = argv[i];
+        if (arg[0] == '-') {
             params[arg] = "";
+        } else if (host.empty()) {
+            host = arg;
+        } else if (port < 0) {
+            port = stoi(arg);
+        } else if (token.empty()) {
+            token = arg;
+        } else {
+            throw runtime_error("Unexpected argument: " + arg);
         }
     }
 
+    if (host.empty()) host = "127.0.0.1";
+    if (port < 0) port = 31001;
+    if (token.empty()) token = "0000000000000000";
+
     auto begin = clock();
-    run(port, move(params));
+    run(host, port, token, move(params));
     auto end = clock();
     if (params.find("--time") != params.end()) {
         cerr << (end - begin) * 1.0 / CLOCKS_PER_SEC << "s" << endl;
