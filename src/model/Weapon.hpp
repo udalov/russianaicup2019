@@ -14,11 +14,11 @@ public:
     int magazine;
     bool wasShooting;
     double spread;
-    std::optional<double> fireTimer;
+    double fireTimer;
     std::optional<double> lastAngle;
     std::optional<int> lastFireTick;
     Weapon();
-    Weapon(WeaponType type, WeaponParams params, int magazine, bool wasShooting, double spread, std::optional<double> fireTimer, std::optional<double> lastAngle, std::optional<int> lastFireTick);
+    Weapon(WeaponType type, WeaponParams params, int magazine, bool wasShooting, double spread, double fireTimer, std::optional<double> lastAngle, std::optional<int> lastFireTick);
     static Weapon readFrom(InputStream& stream);
     std::string toString() const;
 };

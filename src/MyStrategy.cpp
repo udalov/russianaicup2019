@@ -13,7 +13,7 @@ const double EPS = 1e-9;
 MyStrategy::MyStrategy() : params() {}
 MyStrategy::MyStrategy(const unordered_map<string, string>& params) : params(params) {}
 
-unique_ptr<vector<UnitAction>> getRandomMoveSequence(int updatesPerTick) {
+unique_ptr<vector<UnitAction>> getRandomMoveSequence(int updatesPerTick, const Vec& aim) {
     auto ans = make_unique<vector<UnitAction>>();
     UnitAction moveRight;
     moveRight.velocity = 100.0;
@@ -38,7 +38,7 @@ unique_ptr<vector<UnitAction>> getRandomMoveSequence(int updatesPerTick) {
 
     for (auto& t : *ans) {
         t.shoot = true;
-        t.aim = Vec(50, 42);
+        t.aim = aim;
     }
     return ans;
 }
@@ -83,18 +83,17 @@ bool isWallOrPlatform(const Level& level, double x, double y, bool jumpDown) {
     return tile == Tile::WALL || tile == Tile::LADDER || (!jumpDown && tile == Tile::PLATFORM);
 }
 
-bool intersects(const Unit& unit, const Vec& smth, double sizeX, double sizeY) {
-    auto pos = unit.center();
-    return 2 * abs(pos.x - smth.x) <= unitSize.x + sizeX &&
-        2 * abs(pos.y - smth.y) <= unitSize.y + sizeY;
+bool intersects(const Unit& unit, const Vec& rectCenter, double sizeX, double sizeY) {
+    auto unitCenter = unit.center();
+    return 2 * abs(unitCenter.x - rectCenter.x) <= unitSize.x + sizeX &&
+        2 * abs(unitCenter.y - rectCenter.y) <= unitSize.y + sizeY;
 }
 
 bool intersects(const Unit& unit, const LootBox& box) {
     return intersects(unit, box.position, lootBoxSize.x, lootBoxSize.y);
 }
 
-bool intersectsEnemyBullet(const Unit& unit, const Bullet& bullet) {
-    constexpr auto eps = 1e-8;
+bool intersectsBullet(const Unit& unit, const Bullet& bullet, double eps = 0.0) {
     return intersects(unit, bullet.position, bullet.size + eps, bullet.size + eps);
 }
 
@@ -122,13 +121,12 @@ vector<LootBox> getReachableLootBoxes(const Unit& unit, const World& world, size
 
 pair<int, World> simulationPrediction;
 
-void simulate(int myId, const Level& level, World& world, int currentTick, const vector<UnitAction>& moves, Debug *debug, int updatesPerTick, size_t ticks) {
+void simulate(
+    int myId, const Level& level, World& world, const vector<UnitAction>& moves, int updatesPerTick, size_t ticks,
+    const function<void(size_t, const World&)>& callback
+) {
     auto& me = findUnit(world, myId);
     auto alpha = 1.0 / ticksPerSecond / updatesPerTick;
-
-    if (debug) {
-        log(*debug, string("cur: ") + me.toString());
-    }
 
     auto& x = me.position.x;
     auto& y = me.position.y;
@@ -164,8 +162,6 @@ void simulate(int myId, const Level& level, World& world, int currentTick, const
         for (size_t mt = 0; mt < updatesPerTick; mt++) {
             for (size_t i = 0; i < world.bullets.size();) {
                 auto& bullet = world.bullets[i];
-                // Only simulate enemy bullets for now.
-                if (bullet.playerId == me.playerId) { i++; continue; }
 
                 bullet.position += bullet.velocity * alpha;
                 auto bx = bullet.position.x;
@@ -174,15 +170,31 @@ void simulate(int myId, const Level& level, World& world, int currentTick, const
                 auto s = bullet.size / 2;
                 if (isWall(level, bx - s, by - s) || isWall(level, bx - s, by + s) ||
                     isWall(level, bx + s, by - s) || isWall(level, bx + s, by + s)) {
+                    auto explosion = bullet.explosionParams;
+                    if (explosion.has_value()) {
+                        auto size = explosion->radius;
+                        for (auto& unit : world.units) {
+                            if (intersects(unit, Vec(bx, by), 2 * size, 2 * size)) {
+                                unit.health -= explosion->damage;
+                            }
+                        }
+                    }
                     swap(bullet, world.bullets.back());
                     world.bullets.pop_back();
-                } else if (intersectsEnemyBullet(me, bullet)) {
-                    me.health -= bullet.damage;
-                    swap(bullet, world.bullets.back());
-                    world.bullets.pop_back();
-                } else {
-                    i++;
+                    continue;
                 }
+
+                // TODO: optimize
+                for (auto& unit : world.units) {
+                    if (unit.id != bullet.unitId && intersectsBullet(unit, bullet, 1e-8 /* TODO */)) {
+                        me.health -= bullet.damage;
+                        swap(bullet, world.bullets.back());
+                        world.bullets.pop_back();
+                        goto nextBullet;
+                    }
+                }
+                i++;
+nextBullet:;
             }
 
             if (!me.onLadder && me.jumpState.canJump && me.jumpState.maxTime >= -EPS &&
@@ -241,21 +253,26 @@ void simulate(int myId, const Level& level, World& world, int currentTick, const
             auto& weapon = me.weapon;
             if (weapon.has_value()) {
                 auto& wp = weapon->params;
-                weapon->fireTimer =
-                    (weapon->fireTimer.has_value() ? *weapon->fireTimer : wp.reloadTime) - alpha;
-                if (*weapon->fireTimer <= 0) {
-                    weapon->fireTimer = wp.fireRate;
+                weapon->fireTimer -= alpha;
+                if (weapon->fireTimer <= 0 && move.shoot) {
+                    auto& bp = wp.bullet;
+                    auto aim = move.aim;
+                    auto explosion = weapon->type == WeaponType::ROCKET_LAUNCHER ? optional<ExplosionParams>(rocketLauncherParams.explosion) : nullopt;
+                    world.bullets.push_back(Bullet(weapon->type, me.id, me.playerId, me.position, aim.normalize() * bp.speed, bp.damage, bp.size, explosion));
                     if (--weapon->magazine == 0) {
                         weapon->magazine = wp.magazineSize;
                         weapon->fireTimer = wp.reloadTime;
+                    } else {
+                        weapon->fireTimer = wp.fireRate;
                     }
                 }
             }
 
             if (closestLootBox != loot.end() && intersects(me, *closestLootBox)) {
-                if (closestLootBox->item.isWeapon() && (!me.weapon || move.swapWeapon)) {
+                auto item = closestLootBox->item;
+                if (item.isWeapon() && (!me.weapon || move.swapWeapon)) {
                     me.weapon = Weapon();
-                    me.weapon->type = closestLootBox->item.weaponType();
+                    me.weapon->type = item.weaponType();
                     WeaponParams params;
                     switch (me.weapon->type) {
                         case WeaponType::PISTOL: params = pistolParams; break;
@@ -265,15 +282,20 @@ void simulate(int myId, const Level& level, World& world, int currentTick, const
                     me.weapon->params = params;
                     me.weapon->magazine = params.magazineSize;
                     me.weapon->spread = params.minSpread; // ???
-                    me.weapon->fireTimer = optional<double>(params.reloadTime);
+                    me.weapon->fireTimer = params.reloadTime;
                     me.weapon->lastAngle = optional<double>(atan2(move.aim.y, move.aim.x));
-                }
-
-                size_t i = closestLootBox - loot.begin();
-                if (i + 1 != loot.size()) {
+                    size_t i = closestLootBox - loot.begin();
                     swap(loot[i], loot.back());
+                    loot.pop_back();
+                    /*
+                    // TODO: test
+                } else if (item.data.index() == 0 && *get_if<int>(&item.data) > 0 && me.health < 100) {
+                    me.health = min(me.health + *get_if<int>(&item.data), 100);
+                    size_t i = closestLootBox - loot.begin();
+                    swap(loot[i], loot.back());
+                    loot.pop_back();
+                    */
                 }
-                loot.pop_back();
             }
         }
 
@@ -296,24 +318,7 @@ void simulate(int myId, const Level& level, World& world, int currentTick, const
             vy = me.jumpState.speed * alpha;
         }
 
-        if (debug) {
-            if (tick > 10 && (tick + currentTick) % 10 == 0) {
-                auto coeff = 1.0f - tick * 1.0f / ticks;
-                drawUnit(me, ColorFloat(0.2f * coeff, 0.2f * coeff, 1.0f * coeff, 1.0), *debug);
-            }
-            if (tick > 0 && (tick + currentTick) % 5 == 0) {
-                auto coeff = 1.0f - tick * 1.0f / ticks;
-                for (auto& bullet : world.bullets) {
-                    if (bullet.playerId != me.playerId) {
-                        drawBullet(bullet, ColorFloat(0.7f * coeff, 0.2f * coeff, 0.1f * coeff, 0.8), *debug);
-                    }
-                }
-            }
-            if (tick == 0) {
-                log(*debug, string("next: ") + me.toString());
-                simulationPrediction = make_pair(me.id, world);
-            }
-        }
+        callback(tick, world);
     }
 }
 
@@ -336,10 +341,7 @@ string renderWorld(const pair<int, World>& pair) {
     auto me = findUnit(world, pair.first);
     string ans = me.toString();
     for (auto& bullet : world.bullets) {
-        // Only render enemy bullets for now.
-        if (bullet.playerId != me.playerId) {
-            ans += "\n  " + bullet.toString();
-        }
+        ans += "\n  " + bullet.toString();
     }
     return ans;
 }
@@ -348,8 +350,13 @@ bool simulation = false;
 int simulationErrors = 0;
 
 UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
+    auto& me = findUnit(game.world, myId);
+    auto nearestEnemy = minBy(game.world.units, [&me](const auto& other) {
+        return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
+    });
+
     auto microticks = updatesPerTick;
-    static auto moves = getRandomMoveSequence(microticks);
+    static auto moves = getRandomMoveSequence(microticks, /* nearestEnemy->position - me.position */ Vec(0, -1));
     UnitAction ans;
     if (moves->empty()) return ans;
 
@@ -374,7 +381,29 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
     }
 
     auto world = game.world;
-    simulate(myId, game.level, world, game.currentTick, *moves, &debug, microticks, 300);
+    log(debug, string("cur: ") + findUnit(world, myId).toString());
+
+    auto currentTick = game.currentTick;
+    constexpr size_t ticks = 300;
+
+    simulate(myId, game.level, world, *moves, microticks, ticks,
+             [myId, ticks, currentTick=game.currentTick, &debug](size_t tick, const World& world) {
+        auto& me = findUnit(world, myId);
+        if (tick > 10 && (tick + currentTick) % 10 == 0) {
+            auto coeff = 1.0f - tick * 1.0f / ticks;
+            drawUnit(me, ColorFloat(0.2f * coeff, 0.2f * coeff, 1.0f * coeff, 1.0), debug);
+        }
+        if (tick > 0 && (tick + currentTick) % 5 == 0) {
+            auto coeff = 1.0f - tick * 1.0f / ticks;
+            for (auto& bullet : world.bullets) {
+                drawBullet(bullet, ColorFloat(0.7f * coeff, 0.2f * coeff, 0.1f * coeff, 0.8), debug);
+            }
+        }
+        if (tick == 0) {
+            log(debug, string("next: ") + me.toString());
+            simulationPrediction = make_pair(myId, world);
+        }
+    });
     ans = *moves->begin();
     moves->erase(moves->begin());
     return ans;
@@ -382,9 +411,16 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
 
 typedef vector<UnitAction> Track;
 
-vector<Track> generateTracks(size_t len) {
+vector<Track> generateTracks(size_t len, const Unit& me, const Unit *nearestEnemy) {
     vector<Track> ans;
     Track t(len);
+    /*
+    if (nearestEnemy) {
+        for (size_t i = 0; i < len; i++) {
+            t[i].aim = nearestEnemy->position - me.position;
+        }
+    }
+    */
     ans.push_back(t);
     for (size_t i = 0; i < len; i++) t[i].velocity = 10.0; ans.push_back(t);
     for (size_t i = 0; i < len; i++) t[i].velocity = -10.0; ans.push_back(t);
@@ -406,18 +442,75 @@ vector<Track> generateTracks(size_t len) {
         copy(ans[t2].begin() + mid, ans[t2].end(), t.begin() + mid);
         ans.push_back(t);
     }
+
+    /*
+    size_t shootTick = -1;
+    auto& weapon = me.weapon;
+    if (weapon.has_value()) {
+        auto timer = weapon->fireTimer;
+        for (size_t i = 0; i < len; i++) {
+            if (timer <= 0.0) {
+                shootTick = i;
+                break;
+            }
+            timer -= 1.0 / ticksPerSecond;
+        }
+        if (shootTick >= 0) {
+            size_t sz = ans.size();
+            for (size_t j = 0; j < sz; j++) {
+                t = ans[j];
+                t[shootTick].shoot = true;
+                ans.push_back(t);
+            }
+        }
+    }
+    */
     return ans;
 }
 
-double estimate(const World& world, int myId, const Unit *nearestEnemy, const LootBox *nearestWeapon) {
+double estimate(const World& world, int myId, int magazineAtStart, const Unit *nearestEnemy, const LootBox *nearestWeapon) {
     auto& me = findUnit(world, myId);
-    auto score = me.health * 100;
+    auto score = 0.0;
+    for (auto& unit : world.units) {
+        // TODO: intelligent suicide
+        if (unit.playerId == me.playerId) score += 2 * unit.health;
+        else score -= unit.health;
+    }
+    score *= 10000;
+
+    // Hack
+    // if (!me.weapon || me.weapon->magazine == magazineAtStart) score -= 1000.0;
+
     if (!me.weapon && nearestWeapon) {
         score += -100.0 - me.position.distance(nearestWeapon->position);
     } else if (nearestEnemy) {
         score += -10.0 - abs(me.position.distance(nearestEnemy->position) - 10.0);
     }
     return score;
+}
+
+bool needToShoot(const Unit& me, const Game& game, Track track, const Vec& aim) {
+    if (!me.weapon) return false;
+    if (me.weapon->fireTimer > 0.0) return false;
+    if (me.weapon->type != WeaponType::ROCKET_LAUNCHER) return true;
+
+    auto world1 = game.world;
+    simulate(
+        me.id, game.level, world1, track, 4, track.size(),
+        [&](size_t tick, const World& world) { }
+    );
+    int expectedHealth = findUnit(world1, me.id).health;
+
+    track[0].shoot = true;
+    track[0].aim = aim;
+
+    auto world2 = game.world;
+    simulate(
+        me.id, game.level, world2, track, 4, track.size(),
+        [&](size_t tick, const World& world) { }
+    );
+    int actualHealth = findUnit(world2, me.id).health;
+    return actualHealth >= expectedHealth;
 }
 
 vector<Track> savedTracks;
@@ -444,12 +537,17 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     auto nearestWeapon = minBy(game.world.lootBoxes, [&me](const auto& lootBox) {
         return lootBox.item.isWeapon() ? me.position.sqrDist(lootBox.position) : 1e100;
     });
+    auto magazineAtStart = me.weapon ? me.weapon->magazine : -1;
 
     constexpr size_t trackLen = 80;
     constexpr size_t tracksToSave = 10;
     constexpr size_t microticks = 4;
 
-    auto tracks = generateTracks(trackLen);
+    constexpr size_t estimateCutoff = 20;
+    constexpr size_t estimateEveryNth = 10;
+
+    auto tracks = generateTracks(trackLen, me, nearestEnemy);
+    // cout << "### " << tick << " | " << tracks.size() << " tracks | " << me.toString() << endl;
     for (auto& track : savedTracks) track.push_back(track.back()), tracks.push_back(track);
     savedTracks.clear();
 
@@ -457,8 +555,17 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     for (size_t i = 0; i < tracks.size(); i++) {
         auto& track = tracks[i];
         auto world = game.world;
-        simulate(myId, game.level, world, game.currentTick, track, nullptr, microticks, min(track.size(), trackLen));
-        scores[i] = estimate(world, myId, nearestEnemy, nearestWeapon);
+        auto score = 0.0;
+        simulate(
+            myId, game.level, world, track, microticks, min(track.size(), trackLen),
+            [&](size_t tick, const World& world) {
+                if (tick >= estimateCutoff && tick % estimateEveryNth == 0) {
+                    auto coeff = (trackLen - tick) / (double)(trackLen - estimateCutoff) * 0.5 + 0.5;
+                    score += coeff * estimate(world, myId, magazineAtStart, nearestEnemy, nearestWeapon);
+                }
+            }
+        );
+        scores[i] = score;
     }
 
     auto indices = vector<size_t>(tracks.size());
@@ -468,11 +575,13 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
 
     for (size_t i = 0; i < tracksToSave && i < tracks.size(); i++) savedTracks.push_back(tracks[indices[i]]);
 
+    auto aim = nearestEnemy->position - me.position;
+    auto shoot = needToShoot(me, game, tracks[indices.front()], aim);
     auto ans = tracks.empty() ? UnitAction() : tracks[indices.front()].front();
     // cout << tick << " " << ans.toString() << endl;
     // cout << tick << " " << me.toString() << endl;
-    ans.aim = nearestEnemy->position - me.position;
-    ans.shoot = true;
+    ans.aim = aim;
+    ans.shoot = shoot;
     return ans;
     /*
     auto nearestEnemy = minBy(game.units, [&me](auto& other) {
