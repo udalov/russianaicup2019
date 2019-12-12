@@ -53,7 +53,7 @@ then
     out/aicup2019 $host $port $ARGS &
 fi
 
-./aicup2019 $NOVIS --log-level ERROR --config out/config.json --save-results out/result.txt --player-names $PLAYER1 $PLAYER2
+./aicup2019 $NOVIS --log-level WARN --config out/config.json --save-results out/result.txt --player-names $PLAYER1 $PLAYER2
 test -s out/result.txt && scripts/parse-result.py
 
 wait

@@ -10,13 +10,13 @@
 
 using namespace std;
 
-void run(const string& host, int port, const string& token, unordered_map<string, string>&& params) {
+void run(const string& host, int port, const string& token, const unordered_map<string, string>& params) {
     auto tcpStream = TcpStream(host, port);
     auto inputStream = getInputStream(&tcpStream);
     auto outputStream = getOutputStream(&tcpStream);
     outputStream->write(token);
     outputStream->flush();
-    MyStrategy myStrategy(move(params));
+    MyStrategy myStrategy(params);
     Debug debug(*outputStream);
     while (true) {
         auto message = ServerMessageGame::readFrom(*inputStream);
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
     if (token.empty()) token = "0000000000000000";
 
     auto begin = clock();
-    run(host, port, token, move(params));
+    run(host, port, token, params);
     auto end = clock();
     if (params.find("--time") != params.end()) {
         cerr << (end - begin) * 1.0 / CLOCKS_PER_SEC << "s" << endl;

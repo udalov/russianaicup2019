@@ -11,7 +11,7 @@ using namespace std;
 const double EPS = 1e-9;
 
 MyStrategy::MyStrategy() : params() {}
-MyStrategy::MyStrategy(unordered_map<string, string>&& params) : params(params) {}
+MyStrategy::MyStrategy(const unordered_map<string, string>& params) : params(params) {}
 
 unique_ptr<vector<UnitAction>> getRandomMoveSequence(int updatesPerTick) {
     auto ans = make_unique<vector<UnitAction>>();
@@ -412,9 +412,9 @@ vector<Track> generateTracks(size_t len) {
 double estimate(const World& world, int myId, const Unit *nearestEnemy, const LootBox *nearestWeapon) {
     auto& me = findUnit(world, myId);
     auto score = me.health * 100;
-    if (!me.weapon) {
+    if (!me.weapon && nearestWeapon) {
         score += -100.0 - me.position.distance(nearestWeapon->position);
-    } else {
+    } else if (nearestEnemy) {
         score += -10.0 - abs(me.position.distance(nearestEnemy->position) - 10.0);
     }
     return score;

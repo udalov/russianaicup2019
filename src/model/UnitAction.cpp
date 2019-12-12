@@ -4,7 +4,7 @@
 
 using namespace std;
 
-UnitAction::UnitAction() : velocity(), jump(), jumpDown(), aim(), shoot(), swapWeapon(), plantMine() {}
+UnitAction::UnitAction() : velocity(), jump(), jumpDown(), aim(), shoot(), reload(), swapWeapon(), plantMine() {}
 UnitAction::UnitAction(double velocity, bool jump, bool jumpDown, Vec2Double aim, bool shoot, bool reload, bool swapWeapon, bool plantMine) : velocity(velocity), jump(jump), jumpDown(jumpDown), aim(aim), shoot(shoot), reload(reload), swapWeapon(swapWeapon), plantMine(plantMine) { }
 void UnitAction::writeTo(OutputStream& stream) const {
     stream.write(velocity);
