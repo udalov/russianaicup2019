@@ -18,6 +18,15 @@ template<typename T> const T *minBy(const std::vector<T>& v, const std::function
     return ans;
 }
 
+template<typename T> void fastRemove(std::vector<T>& v, T& element) {
+    std::swap(element, v.back());
+    v.pop_back();
+}
+
+template<typename T> void fastRemove(std::vector<T>& v, size_t index) {
+    fastRemove(v, v[index]);
+}
+
 const Unit *minBy(const std::vector<Unit>& units, const std::function<double(const Unit&)>& f) {
     return minBy<Unit>(units, f);
 }

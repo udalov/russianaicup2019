@@ -179,17 +179,15 @@ void simulate(
                             }
                         }
                     }
-                    swap(bullet, world.bullets.back());
-                    world.bullets.pop_back();
-                    continue;
+                    fastRemove(world.bullets, bullet);
+                    goto nextBullet;
                 }
 
                 // TODO: optimize
                 for (auto& unit : world.units) {
                     if (unit.id != bullet.unitId && intersectsBullet(unit, bullet, 1e-8 /* TODO */)) {
                         me.health -= bullet.damage;
-                        swap(bullet, world.bullets.back());
-                        world.bullets.pop_back();
+                        fastRemove(world.bullets, bullet);
                         goto nextBullet;
                     }
                 }
@@ -284,16 +282,12 @@ nextBullet:;
                     me.weapon->spread = params.minSpread; // ???
                     me.weapon->fireTimer = params.reloadTime;
                     me.weapon->lastAngle = optional<double>(atan2(move.aim.y, move.aim.x));
-                    size_t i = closestLootBox - loot.begin();
-                    swap(loot[i], loot.back());
-                    loot.pop_back();
+                    fastRemove(loot, *closestLootBox);
                     /*
                     // TODO: test
                 } else if (item.data.index() == 0 && *get_if<int>(&item.data) > 0 && me.health < 100) {
                     me.health = min(me.health + *get_if<int>(&item.data), 100);
-                    size_t i = closestLootBox - loot.begin();
-                    swap(loot[i], loot.back());
-                    loot.pop_back();
+                    fastRemove(loot, *closestLootBox);
                     */
                 }
             }
