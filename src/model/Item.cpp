@@ -5,7 +5,7 @@ using namespace std;
 Item::Item() {}
 string Item::toString() const {
     switch (data.index()) {
-        case 0: return string("HP(") + to_string(*get_if<int>(&data)) + ")";
+        case 0: return string("HP(") + to_string(health()) + ")";
         case 1: return string("W(") + weaponTypeToString(weaponType()) + ")";
         case 2: return "M";
         default: return "?";
@@ -16,6 +16,12 @@ bool Item::isWeapon() const {
 }
 WeaponType Item::weaponType() const {
     return *get_if<WeaponType>(&data);
+}
+bool Item::isHealthPack() const {
+    return data.index() == 0;
+}
+int Item::health() const {
+    return *get_if<int>(&data);
 }
 WeaponType readWeaponType(InputStream& stream) {
     switch (stream.readInt()) {

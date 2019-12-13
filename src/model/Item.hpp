@@ -15,6 +15,9 @@ public:
     bool isWeapon() const;
     WeaponType weaponType() const;
 
+    bool isHealthPack() const;
+    int health() const;
+
     Item();
     Item(std::variant<int, WeaponType, std::tuple<>> data) : data(data) {}
     static Item readFrom(InputStream& stream);

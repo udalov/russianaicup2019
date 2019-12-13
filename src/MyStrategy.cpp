@@ -105,18 +105,18 @@ const Unit& findUnit(const World& world, int id) {
     return static_cast<const Unit&>(findUnit(const_cast<World&>(world), id));
 }
 
-vector<LootBox> getReachableLootBoxes(const Unit& unit, const World& world, size_t ticks) {
-    auto loot = world.lootBoxes;
+void removeUnreachableLootBoxes(const Unit& unit, World& world, size_t ticks) {
+    auto& loot = world.lootBoxes;
     auto v = unit.center();
     constexpr auto closenessX = unitSize.x + lootBoxSize.x;
     constexpr auto closenessY = unitSize.y + lootBoxSize.y;
-    loot.erase(remove_if(loot.begin(), loot.end(), [&v, ticks](const auto& b) {
+    loot.erase(remove_if(loot.begin(), loot.end(), [&v, ticks](const auto& box) {
         constexpr auto maxSpeedX = 10.0 / ticksPerSecond;
         constexpr auto maxSpeedY = 20.0 / ticksPerSecond;
-        return abs(v.x - b.position.x) > (unitSize.x + lootBoxSize.x) / 2 + maxSpeedX * ticks + EPS &&
-            abs(v.y - b.position.y) > (unitSize.y + lootBoxSize.y) / 2 + maxSpeedY * ticks + EPS;
+        auto b = box.center();
+        return abs(v.x - b.x) > (unitSize.x + lootBoxSize.x) / 2 + maxSpeedX * ticks + EPS &&
+            abs(v.y - b.y) > (unitSize.y + lootBoxSize.y) / 2 + maxSpeedY * ticks + EPS;
     }), loot.end());
-    return loot;
 }
 
 pair<int, World> simulationPrediction;
@@ -134,11 +134,11 @@ void simulate(
     auto uy = unitSize.y;
     auto half = ux / 2;
 
-    auto loot = getReachableLootBoxes(me, world, ticks);
+    removeUnreachableLootBoxes(me, world, ticks);
 
     for (size_t tick = 0; tick < ticks; tick++) {
-        auto closestLootBox = min_element(loot.begin(), loot.end(), [&me](const auto& b1, const auto& b2) {
-            return b1.position.sqrDist(me.center()) < b2.position.sqrDist(me.center());
+        auto closestLootBox = minBy<LootBox>(world.lootBoxes, [&me](const auto& box) {
+            return box.center().sqrDist(me.center());
         });
         auto& move = moves[tick];
         auto vx = min(max(move.velocity, -unitMaxHorizontalSpeed), unitMaxHorizontalSpeed) * alpha;
@@ -266,7 +266,7 @@ nextBullet:;
                 }
             }
 
-            if (closestLootBox != loot.end() && intersects(me, *closestLootBox)) {
+            if (closestLootBox && intersects(me, *closestLootBox)) {
                 auto item = closestLootBox->item;
                 if (item.isWeapon() && (!me.weapon || move.swapWeapon)) {
                     me.weapon = Weapon();
@@ -282,13 +282,10 @@ nextBullet:;
                     me.weapon->spread = params.minSpread; // ???
                     me.weapon->fireTimer = params.reloadTime;
                     me.weapon->lastAngle = optional<double>(atan2(move.aim.y, move.aim.x));
-                    fastRemove(loot, *closestLootBox);
-                    /*
-                    // TODO: test
-                } else if (item.data.index() == 0 && *get_if<int>(&item.data) > 0 && me.health < 100) {
-                    me.health = min(me.health + *get_if<int>(&item.data), 100);
-                    fastRemove(loot, *closestLootBox);
-                    */
+                    fastRemove(world.lootBoxes, *closestLootBox);
+                } else if (item.isHealthPack() && item.health() > 0 && me.health < 100) {
+                    me.health = min(me.health + item.health(), 100);
+                    fastRemove(world.lootBoxes, *closestLootBox);
                 }
             }
         }

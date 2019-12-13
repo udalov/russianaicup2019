@@ -5,9 +5,9 @@
 #include <functional>
 #include <vector>
 
-template<typename T> const T *minBy(const std::vector<T>& v, const std::function<double(const T&)>& f) {
+template<typename T> T *minBy(std::vector<T>& v, const std::function<double(const T&)>& f) {
     auto best = 1e100;
-    const T *ans = nullptr;
+    T *ans = nullptr;
     for (auto& x : v) {
         auto cur = f(x);
         if (cur < best) {
@@ -16,6 +16,10 @@ template<typename T> const T *minBy(const std::vector<T>& v, const std::function
         }
     }
     return ans;
+}
+
+template<typename T> const T *minBy(const std::vector<T>& v, const std::function<double(const T&)>& f) {
+    return static_cast<const T *>(minBy(const_cast<std::vector<T>&>(v), f));
 }
 
 template<typename T> void fastRemove(std::vector<T>& v, T& element) {
