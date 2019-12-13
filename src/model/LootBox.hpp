@@ -15,6 +15,8 @@ public:
     LootBox(Vec2Double position, Vec2Double size, Item item);
     static LootBox readFrom(InputStream& stream);
     std::string toString() const;
+
+    Vec center() const;
 };
 
 #endif

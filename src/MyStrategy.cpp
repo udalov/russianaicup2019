@@ -90,7 +90,7 @@ bool intersects(const Unit& unit, const Vec& rectCenter, double sizeX, double si
 }
 
 bool intersects(const Unit& unit, const LootBox& box) {
-    return intersects(unit, box.position, lootBoxSize.x, lootBoxSize.y);
+    return intersects(unit, box.center(), lootBoxSize.x, lootBoxSize.y);
 }
 
 bool intersectsBullet(const Unit& unit, const Bullet& bullet, double eps = 0.0) {

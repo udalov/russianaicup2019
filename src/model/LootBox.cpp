@@ -1,5 +1,7 @@
 #include "LootBox.hpp"
 
+#include "../Const.h"
+
 using namespace std;
 
 LootBox::LootBox() { }
@@ -13,4 +15,7 @@ LootBox LootBox::readFrom(InputStream& stream) {
 }
 string LootBox::toString() const {
     return position.toString() + " " + item.toString();
+}
+Vec LootBox::center() const {
+    return position + Vec(0, lootBoxSize.y / 2);
 }
