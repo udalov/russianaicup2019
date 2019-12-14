@@ -497,9 +497,11 @@ bool needToShoot(const Unit& me, const Game& game, Track track, const Vec& aim) 
     if (me.weapon->fireTimer > 0.0) return false;
     if (me.weapon->type != WeaponType::ROCKET_LAUNCHER) return true;
 
+    auto size = min(track.size(), 30ul);
+
     auto world1 = game.world;
     simulate(
-        me.id, game.level, world1, track, 4, track.size(),
+        me.id, game.level, world1, track, 4, size,
         [&](size_t tick, const World& world) { }
     );
     int expectedHealth = findUnit(world1, me.id).health;
@@ -509,7 +511,7 @@ bool needToShoot(const Unit& me, const Game& game, Track track, const Vec& aim) 
 
     auto world2 = game.world;
     simulate(
-        me.id, game.level, world2, track, 4, track.size(),
+        me.id, game.level, world2, track, 4, size,
         [&](size_t tick, const World& world) { }
     );
     int actualHealth = findUnit(world2, me.id).health;
