@@ -30,11 +30,3 @@ template<typename T> void fastRemove(std::vector<T>& v, T& element) {
 template<typename T> void fastRemove(std::vector<T>& v, size_t index) {
     fastRemove(v, v[index]);
 }
-
-const Unit *minBy(const std::vector<Unit>& units, const std::function<double(const Unit&)>& f) {
-    return minBy<Unit>(units, f);
-}
-
-const LootBox *minBy(const std::vector<LootBox>& lootBoxes, const std::function<double(const LootBox&)>& f) {
-    return minBy<LootBox>(lootBoxes, f);
-}

@@ -16,6 +16,7 @@ do
     if [ "$arg" == "-v" ]
     then
         NOVIS=
+        ARGS="$ARGS --vis"
     elif [ -z "$SEED" ]
     then
         SEED=$arg

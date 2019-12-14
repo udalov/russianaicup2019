@@ -339,22 +339,21 @@ string surroundingToString(const Vec& v, const Level& level) {
     return ans;
 }
 
-string renderWorld(const pair<int, World>& pair) {
-    auto& world = pair.second;
-    auto me = findUnit(world, pair.first);
-    string ans = me.toString();
+string renderWorld(int myId, const World& world) {
+    string ans = findUnit(world, myId).toString();
     for (auto& bullet : world.bullets) {
         ans += "\n  " + bullet.toString();
     }
     return ans;
 }
 
+bool visualize = false;
 bool simulation = false;
 int simulationErrors = 0;
 
 UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
     auto& me = findUnit(game.world, myId);
-    auto nearestEnemy = minBy(game.world.units, [&me](const auto& other) {
+    auto nearestEnemy = minBy<Unit>(game.world.units, [&me](const auto& other) {
         return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
     });
 
@@ -365,8 +364,8 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
 
     auto tick = game.currentTick;
     if (tick != 0) {
-        auto actual = renderWorld(make_pair(myId, game.world));
-        auto expected = renderWorld(simulationPrediction);
+        auto actual = renderWorld(myId, game.world);
+        auto expected = renderWorld(simulationPrediction.first, simulationPrediction.second);
         cout << tick << " " << actual << endl;
         if (expected != actual) {
             cout << "ERROR! predicted:" << endl << tick << " " << expected << endl;
@@ -530,17 +529,18 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         }
         checkConstants(game.properties);
         simulation = params.find("--simulate") != params.end();
+        visualize = params.find("--vis") != params.end();
     }
 
     auto myId = myUnit.id;
     auto& me = findUnit(game.world, myId);
     if (simulation) return checkSimulation(myId, game, debug);
 
-    auto nearestEnemy = minBy(game.world.units, [&me](const auto& other) {
+    auto nearestEnemy = minBy<Unit>(game.world.units, [&me](const auto& other) {
         return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
     });
-    auto nearestWeapon = minBy(game.world.lootBoxes, [&me](const auto& lootBox) {
-        return lootBox.item.isWeapon() ? me.position.sqrDist(lootBox.position) : 1e100;
+    auto nearestWeapon = minBy<LootBox>(game.world.lootBoxes, [&me](const auto& box) {
+        return box.item.isWeapon() ? me.position.sqrDist(box.position) : 1e100;
     });
     auto magazineAtStart = me.weapon ? me.weapon->magazine : -1;
 
@@ -580,6 +580,18 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
 
     for (size_t i = 0; i < tracksToSave && i < tracks.size(); i++) savedTracks.push_back(tracks[indices[i]]);
 
+    if (visualize) {
+        log(debug, renderWorld(myId, game.world));
+        auto bestTrack = tracks[indices.front()];
+        auto w = game.world;
+        simulate(
+            myId, game.level, w, bestTrack, microticks, 4,
+            [&](size_t tick, const World& world) {
+                log(debug, string("+") + to_string(tick) + " " + bestTrack[tick].toString() + " -> " + renderWorld(myId, world));
+            }
+        );
+    }
+
     auto aim = nearestEnemy->position - me.position;
     auto shoot = needToShoot(me, game, tracks[indices.front()], aim);
     auto ans = tracks.empty() ? UnitAction() : tracks[indices.front()].front();
@@ -588,40 +600,4 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     ans.aim = aim;
     ans.shoot = shoot;
     return ans;
-    /*
-    auto nearestEnemy = minBy(game.units, [&me](auto& other) {
-        return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
-    });
-    auto nearestWeapon = minBy(game.lootBoxes, [&me](auto& lootBox) {
-        return lootBox.item.isWeapon() ? me.position.sqrDist(lootBox.position) : 1e100;
-    });
-    Vec target = me.position;
-    if (me.weapon == nullptr && nearestWeapon != nullptr) {
-        target = nearestWeapon->position;
-    } else if (nearestEnemy != nullptr) {
-        target = nearestEnemy->position;
-    }
-    log(debug, string("Me: ") + me.position.toString());
-    log(debug, string("Target: ") + target.toString());
-    Vec aim;
-    if (nearestEnemy != nullptr) {
-        aim = Vec(nearestEnemy->position.x - me.position.x, nearestEnemy->position.y - me.position.y);
-    }
-    bool jump = target.y > me.position.y;
-    if (target.x > me.position.x && game.level.tiles[me.position.x + 1][me.position.y] == Tile::WALL) {
-        jump = true;
-    }
-    if (target.x < me.position.x && game.level.tiles[me.position.x - 1][me.position.y] == Tile::WALL) {
-        jump = true;
-    }
-    UnitAction action;
-    action.velocity = target.x - me.position.x;
-    action.jump = jump;
-    action.jumpDown = !action.jump;
-    action.aim = aim;
-    action.shoot = true;
-    action.swapWeapon = false;
-    action.plantMine = false;
-    return action;
-    */
 }
