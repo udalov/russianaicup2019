@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <numeric>
+#include <utility>
 #include <vector>
 #include "Const.h"
 #include "util.h"
@@ -15,9 +16,9 @@ constexpr auto ENEMY_BULLET_RL_EPS = 0.2;
 constexpr auto ENEMY_BULLET_OTHER_EPS = 0.01;
 
 MyStrategy::MyStrategy() : params() {}
-MyStrategy::MyStrategy(const unordered_map<string, string>& params) : params(params) {}
+MyStrategy::MyStrategy(unordered_map<string, string> params) : params(move(params)) {}
 
-unique_ptr<vector<UnitAction>> getRandomMoveSequence(int updatesPerTick, const Vec& aim) {
+unique_ptr<vector<UnitAction>> getRandomMoveSequence(int microticks, const Vec& aim) {
     auto ans = make_unique<vector<UnitAction>>();
     UnitAction moveRight;
     moveRight.velocity = 100.0;
@@ -29,7 +30,7 @@ unique_ptr<vector<UnitAction>> getRandomMoveSequence(int updatesPerTick, const V
     UnitAction left;
     left.velocity = -100.0;
 
-    auto t = 100 / updatesPerTick;
+    auto t = 100 / microticks;
     size_t cp1 = 13 * t;
     size_t cp2 = 25 * t;
     size_t cp3 = 186 * t;
@@ -40,9 +41,9 @@ unique_ptr<vector<UnitAction>> getRandomMoveSequence(int updatesPerTick, const V
     for (size_t i = cp2; i < cp3; i++) ans->push_back(jumpAndMoveRight);
     for (size_t i = cp3; i < cp4; i++) ans->push_back(left);
 
-    for (auto& t : *ans) {
-        t.shoot = true;
-        t.aim = aim;
+    for (auto& action : *ans) {
+        action.shoot = true;
+        action.aim = aim;
     }
     return ans;
 }
@@ -126,12 +127,12 @@ void removeUnreachableLootBoxes(const Unit& unit, World& world, size_t ticks) {
 pair<int, World> simulationPrediction;
 
 void simulate(
-    int myId, const Level& level, World& world, const vector<UnitAction>& moves, int updatesPerTick, size_t ticks,
+    int myId, const Level& level, World& world, const vector<UnitAction>& moves, int microticks, size_t ticks,
     const function<void(size_t, const World&)>& callback
 ) {
     auto& me = findUnit(world, myId);
     // TODO: use more microticks when bullet is nearby
-    auto alpha = 1.0 / ticksPerSecond / updatesPerTick;
+    auto alpha = 1.0 / ticksPerSecond / microticks;
 
     auto& x = me.position.x;
     auto& y = me.position.y;
@@ -164,7 +165,7 @@ void simulate(
             }
         }
 
-        for (size_t mt = 0; mt < updatesPerTick; mt++) {
+        for (size_t mt = 0; mt < microticks; mt++) {
             for (size_t i = 0; i < world.bullets.size();) {
                 auto& bullet = world.bullets[i];
 
@@ -268,7 +269,7 @@ void simulate(
                     auto& bp = wp.bullet;
                     auto aim = move.aim;
                     auto explosion = weapon->type == WeaponType::ROCKET_LAUNCHER ? optional<ExplosionParams>(rocketLauncherParams.explosion) : nullopt;
-                    world.bullets.push_back(Bullet(weapon->type, me.id, me.playerId, me.position, aim.normalize() * bp.speed, bp.damage, bp.size, explosion));
+                    world.bullets.emplace_back(weapon->type, me.id, me.playerId, me.position, aim.normalize() * bp.speed, bp.damage, bp.size, explosion);
                     if (--weapon->magazine == 0) {
                         weapon->magazine = wp.magazineSize;
                         weapon->fireTimer = wp.reloadTime;
@@ -307,7 +308,6 @@ void simulate(
             me.jumpState.canCancel = false;
             me.jumpState.maxTime = 0.0;
             me.jumpState.speed = 0.0;
-            vy = 0.0;
         }
 
         if (getTile(level, x - half, y) == Tile::JUMP_PAD ||
@@ -318,7 +318,6 @@ void simulate(
             me.jumpState.canCancel = false;
             me.jumpState.maxTime = jumpPadJumpTime;
             me.jumpState.speed = jumpPadJumpSpeed;
-            vy = me.jumpState.speed * alpha;
         }
 
         callback(tick, world);
@@ -326,7 +325,7 @@ void simulate(
 }
 
 string surroundingToString(const Vec& v, const Level& level) {
-    string ans = "";
+    string ans;
     for (int dy = 2; dy >= -2; dy--) {
         for (int dx = -2; dx <= 2; dx++) {
             auto z = v + Vec(dx, dy);
@@ -369,9 +368,8 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
         cout << tick << " " << actual << endl;
         if (expected != actual) {
             cout << "ERROR! predicted:" << endl << tick << " " << expected << endl;
-            if (expected.substr(0, expected.find("\n")) != actual.substr(0, actual.find("\n"))) {
-                auto& me = findUnit(game.world, myId);
-                cout << surroundingToString(me.position, game.level);
+            if (expected.substr(0, expected.find('\n')) != actual.substr(0, actual.find('\n'))) {
+                cout << surroundingToString(findUnit(game.world, myId).position, game.level);
             } else {
                 cout << endl;
             }
@@ -385,7 +383,6 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
     auto world = game.world;
     log(debug, string("cur: ") + findUnit(world, myId).toString());
 
-    auto currentTick = game.currentTick;
     constexpr size_t ticks = 300;
 
     simulate(myId, game.level, world, *moves, microticks, ticks,
