@@ -8,7 +8,11 @@
 
 using namespace std;
 
-const double EPS = 1e-9;
+constexpr auto EPS = 1e-9;
+
+constexpr auto RL_EXPLOSION_EPS = 0.2;
+constexpr auto ENEMY_BULLET_RL_EPS = 0.2;
+constexpr auto ENEMY_BULLET_OTHER_EPS = 0.01;
 
 MyStrategy::MyStrategy() : params() {}
 MyStrategy::MyStrategy(const unordered_map<string, string>& params) : params(params) {}
@@ -126,6 +130,7 @@ void simulate(
     const function<void(size_t, const World&)>& callback
 ) {
     auto& me = findUnit(world, myId);
+    // TODO: use more microticks when bullet is nearby
     auto alpha = 1.0 / ticksPerSecond / updatesPerTick;
 
     auto& x = me.position.x;
@@ -167,32 +172,39 @@ void simulate(
                 auto bx = bullet.position.x;
                 auto by = bullet.position.y;
 
+                auto remove = false;
                 auto s = bullet.size / 2;
                 if (isWall(level, bx - s, by - s) || isWall(level, bx - s, by + s) ||
                     isWall(level, bx + s, by - s) || isWall(level, bx + s, by + s)) {
+                    remove = true;
+                }
+
+                auto bulletEps =
+                    bullet.playerId == me.playerId ? 0 :
+                    bullet.weaponType == WeaponType::ROCKET_LAUNCHER ? ENEMY_BULLET_RL_EPS : ENEMY_BULLET_OTHER_EPS;
+                if (!remove) {
+                    // TODO: optimize
+                    for (auto& unit : world.units) {
+                        if (unit.id != bullet.unitId && intersectsBullet(unit, bullet, bulletEps)) {
+                            unit.health -= bullet.damage;
+                            remove = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (remove) {
                     auto explosion = bullet.explosionParams;
                     if (explosion.has_value()) {
-                        auto size = explosion->radius;
+                        auto size = 2 * (explosion->radius + RL_EXPLOSION_EPS);
                         for (auto& unit : world.units) {
-                            if (intersects(unit, Vec(bx, by), 2 * size, 2 * size)) {
+                            if (intersects(unit, bullet.position, size, size)) {
                                 unit.health -= explosion->damage;
                             }
                         }
                     }
                     fastRemove(world.bullets, bullet);
-                    goto nextBullet;
-                }
-
-                // TODO: optimize
-                for (auto& unit : world.units) {
-                    if (unit.id != bullet.unitId && intersectsBullet(unit, bullet, 1e-8 /* TODO */)) {
-                        unit.health -= bullet.damage;
-                        fastRemove(world.bullets, bullet);
-                        goto nextBullet;
-                    }
-                }
-                i++;
-nextBullet:;
+                } else i++;
             }
 
             if (!me.onLadder && me.jumpState.canJump && me.jumpState.maxTime >= -EPS &&
