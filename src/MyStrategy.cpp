@@ -186,7 +186,7 @@ void simulate(
                 // TODO: optimize
                 for (auto& unit : world.units) {
                     if (unit.id != bullet.unitId && intersectsBullet(unit, bullet, 1e-8 /* TODO */)) {
-                        me.health -= bullet.damage;
+                        unit.health -= bullet.damage;
                         fastRemove(world.bullets, bullet);
                         goto nextBullet;
                     }
