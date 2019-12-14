@@ -124,8 +124,6 @@ void removeUnreachableLootBoxes(const Unit& unit, World& world, size_t ticks) {
     }), loot.end());
 }
 
-pair<int, World> simulationPrediction;
-
 void simulate(
     int myId, const Level& level, World& world, const vector<UnitAction>& moves, int microticks, size_t ticks,
     const function<void(size_t, const World&)>& callback
@@ -349,6 +347,7 @@ string renderWorld(int myId, const World& world) {
 bool visualize = false;
 bool simulation = false;
 int simulationErrors = 0;
+pair<int, World> simulationPrediction;
 
 UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
     auto& me = findUnit(game.world, myId);
@@ -514,10 +513,19 @@ bool needToShoot(const Unit& me, const Game& game, Track track, const Vec& aim) 
     return actualHealth >= expectedHealth;
 }
 
-vector<Track> savedTracks;
+struct AllyData {
+    vector<Track> savedTracks;
+
+    AllyData() : savedTracks() {}
+};
+
+AllyData datas[2];
+int minAllyId;
 
 UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& debug) {
     auto tick = game.currentTick;
+    auto myId = myUnit.id;
+    auto& me = findUnit(game.world, myId);
     if (tick == 0) {
         srand(42);
         if (params.find("--dump-constants") != params.end()) {
@@ -527,11 +535,18 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         checkConstants(game.properties);
         simulation = params.find("--simulate") != params.end();
         visualize = params.find("--vis") != params.end();
+
+        minAllyId = numeric_limits<int>::max();
+        for (auto& unit : game.world.units) {
+            if (unit.playerId == me.playerId) {
+                minAllyId = min(minAllyId, unit.id);
+            }
+        }
     }
 
-    auto myId = myUnit.id;
-    auto& me = findUnit(game.world, myId);
     if (simulation) return checkSimulation(myId, game, debug);
+
+    auto& data = datas[me.id != minAllyId];
 
     auto nearestEnemy = minBy<Unit>(game.world.units, [&me](const auto& other) {
         return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
@@ -550,6 +565,7 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
 
     auto tracks = generateTracks(trackLen, me, nearestEnemy);
     // cout << "### " << tick << " | " << tracks.size() << " tracks | " << me.toString() << endl;
+    auto& savedTracks = data.savedTracks;
     for (auto& track : savedTracks) track.push_back(track.back()), tracks.push_back(track);
     savedTracks.clear();
 
