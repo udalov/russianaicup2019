@@ -40,6 +40,7 @@ args = sys.argv[5:]
 if "--custom-properties" in args:
     properties = json.load(open("scripts/properties.json", "r"))
     properties["max_tick_count"] = int(args[0])
+    properties["team_size"] = 1
     # properties["ticks_per_second"] = 6000
     # properties["updates_per_tick"] = 1
 else:

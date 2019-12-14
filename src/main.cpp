@@ -34,8 +34,9 @@ void run(const string& host, int port, const string& token, const unordered_map<
         outputStream->flush();
         if (++tick % 100 == 0) {
             auto end = clock();
-            // TODO: disable locally
+#ifndef LOCAL
             cerr << "time at " << tick << ": " << (end - begin) * 1.0 / CLOCKS_PER_SEC << endl;
+#endif
             begin = end;
         }
     }

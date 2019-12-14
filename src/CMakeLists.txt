@@ -5,6 +5,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE RELEASE)
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 
+if ($ENV{LOCAL})
+    add_definitions(-DLOCAL)
+endif()
+
 # OS and compiler checks.
 if(WIN32)
     add_definitions(-DWIN32)
