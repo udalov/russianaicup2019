@@ -160,10 +160,7 @@ void simulate(
                 (level(x, y + vy) == Tile::LADDER && !move.jumpDown)
             )) {
                 y = floor(y) + EPS;
-                me.jumpState.canJump = true;
-                me.jumpState.canCancel = true;
-                me.jumpState.maxTime = unitJumpTime;
-                me.jumpState.speed = unitJumpSpeed;
+                me.jumpState = JumpState::UNIT_JUMP;
                 if (move.jump) {
                     vy = me.jumpState.speed * alpha;
                 }
@@ -176,10 +173,7 @@ void simulate(
                 } else {
                     y += vy;
                 }
-                me.jumpState.canJump = false;
-                me.jumpState.canCancel = false;
-                me.jumpState.maxTime = 0.0;
-                me.jumpState.speed = 0.0;
+                me.jumpState = JumpState::NO_JUMP;
                 vy = -unitFallSpeed * alpha;
             } else {
                 y += vy;
@@ -187,12 +181,17 @@ void simulate(
 
             if (level(x, y) == Tile::LADDER) {
                 me.onLadder = true;
-                me.jumpState.canJump = true;
-                me.jumpState.canCancel = true;
-                me.jumpState.maxTime = unitJumpTime;
-                me.jumpState.speed = unitJumpSpeed;
+                me.jumpState = JumpState::UNIT_JUMP;
             } else {
                 me.onLadder = false;
+            }
+
+            if (level(x - half, y) == Tile::JUMP_PAD ||
+                level(x + half, y) == Tile::JUMP_PAD ||
+                level(x - half, y + uy) == Tile::JUMP_PAD ||
+                level(x + half, y + uy) == Tile::JUMP_PAD) {
+                me.jumpState = JumpState::JUMP_PAD_JUMP;
+                vy = jumpPadJumpSpeed * alpha;
             }
 
             auto& weapon = me.weapon;
@@ -235,23 +234,6 @@ void simulate(
                     fastRemove(world.lootBoxes, *closestLootBox);
                 }
             }
-        }
-
-        if (me.jumpState.maxTime <= -EPS) {
-            me.jumpState.canJump = false;
-            me.jumpState.canCancel = false;
-            me.jumpState.maxTime = 0.0;
-            me.jumpState.speed = 0.0;
-        }
-
-        if (level(x - half, y) == Tile::JUMP_PAD ||
-            level(x + half, y) == Tile::JUMP_PAD ||
-            level(x - half, y + uy) == Tile::JUMP_PAD ||
-            level(x + half, y + uy) == Tile::JUMP_PAD) {
-            me.jumpState.canJump = true;
-            me.jumpState.canCancel = false;
-            me.jumpState.maxTime = jumpPadJumpTime;
-            me.jumpState.speed = jumpPadJumpSpeed;
         }
 
         callback(tick, world);

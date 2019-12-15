@@ -214,9 +214,9 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     auto aim = nearestEnemy->position - me.position;
     auto shoot = needToShoot(me, game, tracks[indices.front()], aim);
     auto ans = tracks.empty() ? UnitAction() : tracks[indices.front()].front();
-    // cout << tick << " " << ans.toString() << endl;
-    // cout << tick << " " << me.toString() << endl;
     ans.aim = aim;
     ans.shoot = shoot;
+    // cout << tick << " " << ans.toString() << endl;
+    // cout << tick << " " << me.toString() << endl;
     return ans;
 }
