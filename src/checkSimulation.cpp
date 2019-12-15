@@ -70,8 +70,44 @@ string surroundingToString(const Vec& v, const Level& level) {
     return ans;
 }
 
+bool isPredictionCorrect(int playerId, const World& last, const World& expected, const World& actual) {
+    auto& e = expected;
+    auto& a = actual;
+    if (e.units.size() != a.units.size()) return false;
+    for (size_t i = 0; i < e.units.size(); i++) {
+        if (e.units[i].playerId == playerId && e.units[i].toString() != a.units[i].toString()) return false;
+    }
+
+    auto probablySame = [](const Bullet& b1, const Bullet& b2) {
+        return b1.position.sqrDist(b2.position) < 1e-3 && b1.velocity.sqrDist(b2.velocity) < 1e-3;
+    };
+
+    for (auto& eb : e.bullets) {
+        // Do not check bullets that we created during simulation, since they'll surely be incorrect
+        auto previous = find_if(last.bullets.begin(), last.bullets.end(), bind(probablySame, placeholders::_1, eb));
+        if (previous == last.bullets.end()) continue;
+
+        // Every other expected bullet should be equal to some bullet in actual
+        auto ab = find_if(a.bullets.begin(), a.bullets.end(), bind(probablySame, placeholders::_1, eb));
+        if (ab == a.bullets.end() || ab->toString() != eb.toString()) return false;
+    }
+
+    for (auto& ab : a.bullets) {
+        // Do not check bullets that were actually fired (e.g. by opponent), since we can't predict them
+        auto previous = find_if(last.bullets.begin(), last.bullets.end(), bind(probablySame, placeholders::_1, ab));
+        if (previous == last.bullets.end()) continue;
+
+        // Every actual bullet should be equal to some bullet in expected
+        auto eb = find_if(e.bullets.begin(), e.bullets.end(), bind(probablySame, placeholders::_1, ab));
+        if (eb == e.bullets.end() || eb->toString() != ab.toString()) return false;
+    }
+
+    return true;
+}
+
 int simulationErrors = 0;
-pair<int, World> simulationPrediction;
+World lastWorld;
+World expectedWorld;
 UnitAction lastAction;
 
 UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
@@ -87,13 +123,14 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
 
     auto tick = game.currentTick;
     if (tick != 0) {
+        bool ok = isPredictionCorrect(me.playerId, lastWorld, expectedWorld, game.world);
         auto actual = renderWorld(myId, game.world);
-        auto expected = renderWorld(simulationPrediction.first, simulationPrediction.second);
-        if (expected != actual) {
+        auto expected = renderWorld(myId, expectedWorld);
+        if (!ok) {
             cout << "-> " << lastAction.toString() << endl;
         }
         cout << tick << " " << actual << endl;
-        if (expected != actual) {
+        if (!ok) {
             cout << "ERROR! predicted:" << endl << tick << " " << expected << endl;
             if (expected.substr(0, expected.find('\n')) != actual.substr(0, actual.find('\n'))) {
                 cout << surroundingToString(findUnit(game.world, myId).position, game.level);
@@ -127,11 +164,12 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
         }
         if (tick == 0) {
             debug.log(string("next: ") + me.toString());
-            simulationPrediction = make_pair(myId, world);
+            expectedWorld = world;
         }
     });
     ans = *moves->begin();
     moves->erase(moves->begin());
     lastAction = ans;
+    lastWorld = game.world;
     return ans;
 }
