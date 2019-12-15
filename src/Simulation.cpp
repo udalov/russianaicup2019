@@ -2,6 +2,7 @@
 
 #include "model/Tile.hpp"
 #include "Const.h"
+#include <iostream>
 #include <string>
 
 using namespace std;
@@ -18,8 +19,7 @@ bool isWall(const Level& level, double x, double y) {
 
 bool isWallOrPlatform(const Level& level, double x, double y, bool jumpDown) {
     auto tile = level(x, y);
-    // TODO: move tile == LADDER under !jumpDown check?
-    return tile == Tile::WALL || tile == Tile::LADDER || (!jumpDown && tile == Tile::PLATFORM);
+    return tile == Tile::WALL || (!jumpDown && tile == Tile::PLATFORM);
 }
 
 bool intersects(const Unit& unit, const Vec& rectCenter, double sizeX, double sizeY) {
@@ -154,9 +154,10 @@ void simulate(
             }
 
             auto hasJumpTime = me.jumpState.maxTime > 0.0;
-            if (vy < 0 && (
+            if (vy < 0 && floor(y + vy) != floor(y) && (
                 isWallOrPlatform(level, x - half, y + vy, move.jumpDown) ||
-                isWallOrPlatform(level, x + half, y + vy, move.jumpDown)
+                isWallOrPlatform(level, x + half, y + vy, move.jumpDown) ||
+                (level(x, y + vy) == Tile::LADDER && !move.jumpDown)
             )) {
                 y = floor(y) + EPS;
                 me.jumpState.canJump = true;
@@ -186,7 +187,10 @@ void simulate(
 
             if (level(x, y) == Tile::LADDER) {
                 me.onLadder = true;
+                me.jumpState.canJump = true;
+                me.jumpState.canCancel = true;
                 me.jumpState.maxTime = unitJumpTime;
+                me.jumpState.speed = unitJumpSpeed;
             } else {
                 me.onLadder = false;
             }
