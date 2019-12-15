@@ -16,5 +16,5 @@ std::string JumpState::toString() const {
     return std::string(canJump ? "^" : ".") + 
         std::string(canCancel ? "v" : ".") + " " +
         ::toString(speed) + " " +
-        ::toString(maxTime);
+        ::toString(maxTime) + "s";
 }

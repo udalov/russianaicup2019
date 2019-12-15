@@ -153,6 +153,7 @@ void simulate(
                 x += vx;
             }
 
+            auto hasJumpTime = me.jumpState.maxTime > 0.0;
             if (vy < 0 && (
                 isWallOrPlatform(level, x - half, y + vy, move.jumpDown) ||
                 isWallOrPlatform(level, x + half, y + vy, move.jumpDown)
@@ -166,9 +167,14 @@ void simulate(
                     vy = me.jumpState.speed * alpha;
                 }
             } else if (vy > 0 && !me.onLadder && (
+                !hasJumpTime ||
                 isWall(level, x - half, y + uy + vy) || isWall(level, x + half, y + uy + vy)
             )) {
-                y = ceil(y + uy) - uy - EPS;
+                if (hasJumpTime) {
+                    y = ceil(y + uy) - uy - EPS;
+                } else {
+                    y += vy;
+                }
                 me.jumpState.canJump = false;
                 me.jumpState.canCancel = false;
                 me.jumpState.maxTime = 0.0;

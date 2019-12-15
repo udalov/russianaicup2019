@@ -13,14 +13,14 @@ using namespace std;
 unique_ptr<vector<UnitAction>> getRandomMoveSequence(int microticks, const Vec& aim) {
     auto ans = make_unique<vector<UnitAction>>();
     UnitAction moveRight;
-    moveRight.velocity = 100.0;
+    moveRight.velocity = 10.0;
     UnitAction jump;
     jump.jump = true;
     UnitAction jumpAndMoveRight;
-    jumpAndMoveRight.velocity = 1000.0;
+    jumpAndMoveRight.velocity = 10.0;
     jumpAndMoveRight.jump = true;
     UnitAction left;
-    left.velocity = -100.0;
+    left.velocity = -10.0;
 
     auto t = 100 / microticks;
     size_t cp1 = 13 * t;
@@ -72,6 +72,7 @@ string surroundingToString(const Vec& v, const Level& level) {
 
 int simulationErrors = 0;
 pair<int, World> simulationPrediction;
+UnitAction lastAction;
 
 UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
     auto& me = findUnit(game.world, myId);
@@ -88,6 +89,9 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
     if (tick != 0) {
         auto actual = renderWorld(myId, game.world);
         auto expected = renderWorld(simulationPrediction.first, simulationPrediction.second);
+        if (expected != actual) {
+            cout << "-> " << lastAction.toString() << endl;
+        }
         cout << tick << " " << actual << endl;
         if (expected != actual) {
             cout << "ERROR! predicted:" << endl << tick << " " << expected << endl;
@@ -128,5 +132,6 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
     });
     ans = *moves->begin();
     moves->erase(moves->begin());
+    lastAction = ans;
     return ans;
 }
