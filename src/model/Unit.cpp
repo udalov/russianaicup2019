@@ -1,7 +1,5 @@
 #include "Unit.hpp"
 
-#include "../Const.h"
-
 using namespace std;
 
 Unit::Unit(): playerId(), id(), health(), position(), size(), jumpState(), walkedRight(), stand(), onGround(), onLadder(), mines(), weapon() { }
@@ -31,7 +29,4 @@ string Unit::toString() const {
         // (onGround ? "G" : ".") +
         (onLadder ? "L" : ".") +
         (weapon.has_value() ? " {" + weapon->toString() + "}" : "");
-}
-Vec Unit::center() const {
-    return position + Vec(0, unitSize.y / 2);
 }

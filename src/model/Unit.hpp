@@ -7,6 +7,7 @@
 #include "JumpState.hpp"
 #include "Weapon.hpp"
 #include "Vec2D.h"
+#include "../Const.h"
 
 class Unit {
 public:
@@ -27,7 +28,9 @@ public:
     static Unit readFrom(InputStream& stream);
     std::string toString() const;
 
-    Vec center() const;
+    constexpr Vec center() const {
+        return position + Vec(0, unitSize.y / 2);
+    }
 };
 
 #endif

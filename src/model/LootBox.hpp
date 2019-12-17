@@ -5,6 +5,7 @@
 #include <string>
 #include "Item.hpp"
 #include "Vec2D.h"
+#include "../Const.h"
 
 class LootBox {
 public:
@@ -16,7 +17,9 @@ public:
     static LootBox readFrom(InputStream& stream);
     std::string toString() const;
 
-    Vec center() const;
+    constexpr Vec center() const {
+        return position + Vec(0, lootBoxSize.y / 2);
+    }
 };
 
 #endif
