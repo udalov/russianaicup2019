@@ -86,6 +86,7 @@ void simulate(
                 vy = me.jumpState.speed * alpha;
             } else {
                 vy = -unitFallSpeed * alpha;
+                me.jumpState = JumpState::NO_JUMP;
             }
         }
 
