@@ -91,6 +91,12 @@ double estimate(const World& world, int myId, int magazineAtStart, const Unit *n
     return score;
 }
 
+int getMyHealth(const World& world, int playerId) {
+    int ans = 0;
+    for (auto& unit : world.units) if (unit.playerId == playerId) ans += unit.health;
+    return ans;
+}
+
 bool needToShoot(const Unit& me, const Game& game, Track track, const Vec& aim) {
     if (!me.weapon) return false;
     if (me.weapon->fireTimer > 0.0) return false;
@@ -103,7 +109,7 @@ bool needToShoot(const Unit& me, const Game& game, Track track, const Vec& aim) 
         me.id, game.level, world1, track, 4, size,
         [&](size_t tick, const World& world) { }
     );
-    int expectedHealth = findUnit(world1, me.id).health;
+    int expectedHealth = getMyHealth(world1, me.playerId);
 
     track[0].shoot = true;
     track[0].aim = aim;
@@ -113,7 +119,7 @@ bool needToShoot(const Unit& me, const Game& game, Track track, const Vec& aim) 
         me.id, game.level, world2, track, 4, size,
         [&](size_t tick, const World& world) { }
     );
-    int actualHealth = findUnit(world2, me.id).health;
+    int actualHealth = getMyHealth(world2, me.playerId);
     return actualHealth >= expectedHealth;
 }
 
