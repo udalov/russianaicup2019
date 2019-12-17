@@ -202,7 +202,7 @@ void simulate(
                     auto& bp = wp.bullet;
                     auto aim = move.aim;
                     auto explosion = weapon->type == WeaponType::ROCKET_LAUNCHER ? optional<ExplosionParams>(rocketLauncherParams.explosion) : nullopt;
-                    world.bullets.emplace_back(weapon->type, me.id, me.playerId, me.position, aim.normalize() * bp.speed, bp.damage, bp.size, explosion);
+                    world.bullets.emplace_back(weapon->type, me.id, me.playerId, me.center(), aim.normalize() * bp.speed, bp.damage, bp.size, explosion);
                     if (--weapon->magazine == 0) {
                         weapon->magazine = wp.magazineSize;
                         weapon->fireTimer = wp.reloadTime;
