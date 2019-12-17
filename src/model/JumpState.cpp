@@ -16,8 +16,8 @@ JumpState JumpState::readFrom(InputStream& stream) {
 std::string JumpState::toString() const {
     return std::string(canJump ? "^" : ".") + 
         std::string(canCancel ? "v" : ".") + " " +
-        ::toString(speed) + " " +
-        ::toString(maxTime) + "s";
+        ::toString(speed, 2) + " " +
+        ::toString(maxTime, 3) + "s";
 }
 JumpState JumpState::NO_JUMP = JumpState(false, 0.0, 0.0, false);
 JumpState JumpState::UNIT_JUMP = JumpState(true, unitJumpSpeed, unitJumpTime, true);

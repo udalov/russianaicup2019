@@ -65,6 +65,9 @@ string surroundingToString(const Vec& v, const Level& level) {
                 ? level(z) : Tile::WALL;
             ans += tileToChar(tile);
         }
+        if (dy == 0) {
+            ans += " center at (" + to_string((size_t) v.x) + ", " + to_string((size_t) v.y) + ")";
+        }
         ans += "\n";
     }
     return ans;

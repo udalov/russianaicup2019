@@ -26,7 +26,7 @@ Weapon Weapon::readFrom(InputStream& stream) {
 string Weapon::toString() const {
     string ans = weaponTypeToString(type) + " " + to_string(magazine);
     // TODO: ans += " " + ::toString(spread);
-    if (fireTimer > 0.0) ans += " " + ::toString(fireTimer) + "s";
+    if (fireTimer > 0.0) ans += " " + ::toString(fireTimer, 3) + "s";
     // TODO: if (lastAngle.has_value()) ans += " " + ::toString(*lastAngle);
     // if (lastFireTick.has_value()) ans += " " + to_string(*lastFireTick);
     return ans;

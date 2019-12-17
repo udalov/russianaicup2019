@@ -4,9 +4,13 @@
 
 using namespace std;
 
-string toString(double x) {
+string toString(double x, int precision) {
     ostringstream out;
-    out.precision(3);
+    out.precision(precision);
     out << fixed << x;
     return out.str();
+}
+
+string toString(double x) {
+    return toString(x, 8);
 }
