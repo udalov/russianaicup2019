@@ -10,7 +10,7 @@
 
 using namespace std;
 
-void run(const string& host, int port, const string& token, const unordered_map<string, string>& params) {
+int run(const string& host, int port, const string& token, const unordered_map<string, string>& params) {
     auto tcpStream = TcpStream(host, port);
     auto inputStream = getInputStream(&tcpStream);
     auto outputStream = getOutputStream(&tcpStream);
@@ -40,6 +40,7 @@ void run(const string& host, int port, const string& token, const unordered_map<
             begin = end;
         }
     }
+    return tick;
 }
 
 int main(int argc, char *argv[]) {
@@ -67,10 +68,15 @@ int main(int argc, char *argv[]) {
     if (token.empty()) token = "0000000000000000";
 
     auto begin = clock();
-    run(host, port, token, params);
+    auto ticks = run(host, port, token, params);
     auto end = clock();
-    if (params.find("--time") != params.end()) {
-        cerr << (end - begin) * 1.0 / CLOCKS_PER_SEC << "s" << endl;
+    auto outputTime = params.find("--time") != params.end();
+#ifndef LOCAL
+    outputTime = true;
+#endif
+    if (outputTime) {
+        auto time = (end - begin) * 1.0 / CLOCKS_PER_SEC;
+        cerr << (time * 1000.0 / max(ticks, 1)) << "ms per tick (" << ticks << " ticks, " << time << "s)" << endl;
     }
 
     return 0;
