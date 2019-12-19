@@ -4,8 +4,8 @@
 
 using namespace std;
 
-Weapon::Weapon() : type(), params(), magazine(), wasShooting(), spread(), fireTimer(), lastAngle(), lastFireTick() { }
-Weapon::Weapon(WeaponType type, WeaponParams params, int magazine, bool wasShooting, double spread, double fireTimer, optional<double> lastAngle, optional<int> lastFireTick) : type(type), params(params), magazine(magazine), wasShooting(wasShooting), spread(spread), fireTimer(fireTimer), lastAngle(lastAngle), lastFireTick(lastFireTick) { }
+Weapon::Weapon() : type(), params(), magazine(), spread(), fireTimer(), lastAngle() { }
+Weapon::Weapon(WeaponType type, WeaponParams params, int magazine, double spread, double fireTimer, optional<double> lastAngle) : type(type), params(params), magazine(magazine), spread(spread), fireTimer(fireTimer), lastAngle(lastAngle) { }
 Weapon Weapon::readFrom(InputStream& stream) {
     Weapon result;
     switch (stream.readInt()) {
@@ -16,11 +16,11 @@ Weapon Weapon::readFrom(InputStream& stream) {
     }
     result.params = WeaponParams::readFrom(stream);
     result.magazine = stream.readInt();
-    result.wasShooting = stream.readBool();
+    stream.readBool(); // wasShooting
     result.spread = stream.readDouble();
     result.fireTimer = stream.readBool() ? stream.readDouble() : 0.0;
     result.lastAngle = stream.readBool() ? optional<double>(stream.readDouble()) : nullopt;
-    result.lastFireTick = stream.readBool() ? optional<int>(stream.readInt()) : nullopt;
+    if (stream.readBool()) stream.readInt(); // lastFireTick
     return result;
 }
 string Weapon::toString() const {
@@ -28,6 +28,5 @@ string Weapon::toString() const {
     // TODO: ans += " " + ::toString(spread);
     if (fireTimer > 0.0) ans += " " + ::toString(fireTimer, 3) + "s";
     // TODO: if (lastAngle.has_value()) ans += " " + ::toString(*lastAngle);
-    // if (lastFireTick.has_value()) ans += " " + to_string(*lastFireTick);
     return ans;
 }

@@ -121,8 +121,8 @@ void simulate(
                 }
 
                 if (remove) {
-                    auto explosion = bullet.explosionParams;
-                    if (explosion.has_value()) {
+                    if (bullet.weaponType == WeaponType::ROCKET_LAUNCHER) {
+                        auto& explosion = rocketLauncherParams.explosion;
                         auto size = 2 * (explosion->radius + RL_EXPLOSION_EPS);
                         for (auto& unit : world.units) {
                             if (intersects(unit, bullet.position, size, size)) {
@@ -203,8 +203,7 @@ void simulate(
                 if (weapon->fireTimer <= 0 && move.shoot) {
                     auto& bp = wp.bullet;
                     auto aim = move.aim;
-                    auto explosion = weapon->type == WeaponType::ROCKET_LAUNCHER ? optional<ExplosionParams>(rocketLauncherParams.explosion) : nullopt;
-                    world.bullets.emplace_back(weapon->type, me.id, me.playerId, me.center(), aim.normalize() * bp.speed, bp.damage, bp.size, explosion);
+                    world.bullets.emplace_back(weapon->type, me.id, me.playerId, me.center(), aim.normalize() * bp.speed, bp.damage, bp.size);
                     if (--weapon->magazine == 0) {
                         weapon->magazine = wp.magazineSize;
                         weapon->fireTimer = wp.reloadTime;

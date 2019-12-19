@@ -27,6 +27,8 @@ void checkConstants(const Properties& properties) {
     check(pistolParams, properties.weaponParams.find(WeaponType::PISTOL)->second);
     check(assaultRifleParams, properties.weaponParams.find(WeaponType::ASSAULT_RIFLE)->second);
     check(rocketLauncherParams, properties.weaponParams.find(WeaponType::ROCKET_LAUNCHER)->second);
+
+    check(mineExplosionParams, properties.mineExplosionParams);
 }
 
 

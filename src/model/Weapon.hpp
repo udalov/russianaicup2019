@@ -12,13 +12,11 @@ public:
     WeaponType type;
     WeaponParams params;
     int magazine;
-    bool wasShooting;
     double spread;
     double fireTimer;
     std::optional<double> lastAngle;
-    std::optional<int> lastFireTick;
     Weapon();
-    Weapon(WeaponType type, WeaponParams params, int magazine, bool wasShooting, double spread, double fireTimer, std::optional<double> lastAngle, std::optional<int> lastFireTick);
+    Weapon(WeaponType type, WeaponParams params, int magazine, double spread, double fireTimer, std::optional<double> lastAngle);
     static Weapon readFrom(InputStream& stream);
     std::string toString() const;
 };

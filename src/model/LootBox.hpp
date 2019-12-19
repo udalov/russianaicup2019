@@ -10,10 +10,9 @@
 class LootBox {
 public:
     Vec2Double position;
-    Vec2Double size;
     Item item;
     LootBox();
-    LootBox(Vec2Double position, Vec2Double size, Item item);
+    LootBox(Vec2Double position, Item item);
     static LootBox readFrom(InputStream& stream);
     std::string toString() const;
 

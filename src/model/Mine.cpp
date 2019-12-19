@@ -1,14 +1,16 @@
 #include "Mine.hpp"
 
+#include "ExplosionParams.hpp"
+
 using namespace std;
 
 Mine::Mine() { }
-Mine::Mine(int playerId, Vec2Double position, Vec2Double size, MineState state, optional<double> timer, double triggerRadius, ExplosionParams explosionParams) : playerId(playerId), position(position), size(size), state(state), timer(timer), triggerRadius(triggerRadius), explosionParams(explosionParams) { }
+Mine::Mine(int playerId, Vec2Double position, MineState state, optional<double> timer, double triggerRadius) : playerId(playerId), position(position), state(state), timer(timer), triggerRadius(triggerRadius) { }
 Mine Mine::readFrom(InputStream& stream) {
     Mine result;
     result.playerId = stream.readInt();
     result.position = Vec2Double::readFrom(stream);
-    result.size = Vec2Double::readFrom(stream);
+    Vec2Double::readFrom(stream); // size
     switch (stream.readInt()) {
         case 0: result.state = MineState::PREPARING; break;
         case 1: result.state = MineState::IDLE; break;
@@ -18,17 +20,10 @@ Mine Mine::readFrom(InputStream& stream) {
     }
     result.timer = stream.readBool() ? optional<double>(stream.readDouble()) : nullopt;
     result.triggerRadius = stream.readDouble();
-    result.explosionParams = ExplosionParams::readFrom(stream);
+    ExplosionParams::readFrom(stream);
     return result;
 }
 string Mine::toString() const {
-    return string("Mine") + "(" +
-        to_string(playerId) +
-        position.toString() +
-        size.toString() +
-        "TODO" + 
-        "TODO" + 
-        to_string(triggerRadius) +
-        explosionParams.toString() +
-        ")";
+    return string("[M ") + position.toString() + " " +
+        (timer.has_value() ? to_string(*timer) + "s" : "-") + "]";
 }
