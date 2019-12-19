@@ -2,6 +2,7 @@
 
 #include "model/Tile.hpp"
 #include "Const.h"
+#include "util.h"
 #include <iostream>
 #include <string>
 

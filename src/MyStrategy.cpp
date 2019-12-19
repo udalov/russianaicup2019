@@ -40,8 +40,8 @@ vector<Track> generateTracks(size_t len, const Unit& me, const Unit *nearestEnem
             t2 = rand() % ans.size();
         } while (t1 == t2);
         size_t mid = rand() % len;
-        copy(ans[t1].begin(), ans[t1].begin() + mid, t.begin());
-        copy(ans[t2].begin() + mid, ans[t2].end(), t.begin() + mid);
+        for (size_t i = 0; i < mid; i++) t[i] = ans[t1][i];
+        for (size_t i = mid; i < len; i++) t[i] = ans[t2][i];
         ans.push_back(t);
     }
 
@@ -206,17 +206,10 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
 
     sort(indices.begin(), indices.end(), [&scores](auto& i1, auto& i2) { return scores[i1] > scores[i2]; });
 
-    for (size_t i = 0; i < tracksToSave && i < tracks.size(); i++) {
-        // TODO: optimize
-        auto track = tracks[indices[i]];
-        track.erase(track.begin());
-        track.push_back(track.back());
-        savedTracks.emplace_back(track);
-    }
+    auto& bestTrack = tracks[indices.front()];
 
     if (visualize) {
         debug.log(renderWorld(myId, game.world));
-        auto bestTrack = tracks[indices.front()];
         auto w = game.world;
         simulate(
             myId, game.level, w, bestTrack, microticks, 4,
@@ -227,11 +220,18 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     }
 
     auto aim = nearestEnemy->position - me.position;
-    auto shoot = needToShoot(me, game, tracks[indices.front()], aim);
-    auto ans = tracks.empty() ? UnitAction() : tracks[indices.front()].front();
+    auto shoot = needToShoot(me, game, bestTrack, aim);
+    auto ans = bestTrack.first();
     ans.aim = aim;
     ans.shoot = shoot;
     // cout << tick << " " << ans.toString() << endl;
     // cout << tick << " " << me.toString() << endl;
+
+    for (size_t i = 0; i < tracksToSave && i < tracks.size(); i++) {
+        auto& track = tracks[indices[i]];
+        track.consume();
+        savedTracks.emplace_back(track);
+    }
+
     return ans;
 }

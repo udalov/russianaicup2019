@@ -10,33 +10,31 @@
 
 using namespace std;
 
-unique_ptr<vector<UnitAction>> getRandomMoveSequence(int microticks, const Vec& aim) {
-    auto ans = make_unique<vector<UnitAction>>();
-    UnitAction moveRight;
+unique_ptr<Track> getRandomMoveSequence(int microticks, const Vec& aim) {
+    size_t cp1 = 13;
+    size_t cp2 = 25;
+    size_t cp3 = 186;
+    size_t cp4 = 1000;
+
+    auto ans = make_unique<Track>(cp4);
+    UnitAction defaultMove;
+    defaultMove.shoot = true;
+    defaultMove.aim = aim;
+
+    UnitAction moveRight = defaultMove;
     moveRight.velocity = 10.0;
-    UnitAction jump;
+    UnitAction jump = defaultMove;
     jump.jump = true;
-    UnitAction jumpAndMoveRight;
-    jumpAndMoveRight.velocity = 10.0;
+    UnitAction jumpAndMoveRight = moveRight;
     jumpAndMoveRight.jump = true;
-    UnitAction left;
+    UnitAction left = defaultMove;
     left.velocity = -10.0;
 
-    auto t = 100 / microticks;
-    size_t cp1 = 13 * t;
-    size_t cp2 = 25 * t;
-    size_t cp3 = 186 * t;
-    size_t cp4 = 1000 * t;
+    for (size_t i = 0; i < cp1; i++) (*ans)[i] = moveRight;
+    for (size_t i = cp1; i < cp2; i++) (*ans)[i] = jump;
+    for (size_t i = cp2; i < cp3; i++) (*ans)[i] = jumpAndMoveRight;
+    for (size_t i = cp3; i < cp4; i++) (*ans)[i] = left;
 
-    for (size_t i = 0; i < cp1; i++) ans->push_back(moveRight);
-    for (size_t i = cp1; i < cp2; i++) ans->push_back(jump);
-    for (size_t i = cp2; i < cp3; i++) ans->push_back(jumpAndMoveRight);
-    for (size_t i = cp3; i < cp4; i++) ans->push_back(left);
-
-    for (auto& action : *ans) {
-        action.shoot = true;
-        action.aim = aim;
-    }
     return ans;
 }
 
@@ -122,7 +120,6 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
     auto microticks = updatesPerTick;
     static auto moves = getRandomMoveSequence(microticks, /* nearestEnemy->position - me.position */ Vec(0, -1));
     UnitAction ans;
-    if (moves->empty()) return ans;
 
     auto tick = game.currentTick;
     if (tick != 0) {
@@ -170,8 +167,8 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
             expectedWorld = world;
         }
     });
-    ans = *moves->begin();
-    moves->erase(moves->begin());
+    ans = moves->first();
+    moves->consume();
     lastAction = ans;
     lastWorld = game.world;
     return ans;

@@ -3,12 +3,9 @@
 #include "model/LootBox.hpp"
 #include "model/Unit.hpp"
 #include "model/World.h"
-#include "model/UnitAction.hpp"
 #include <functional>
 #include <string>
 #include <vector>
-
-typedef std::vector<UnitAction> Track;
 
 inline Unit& findUnit(World& world, int id) {
     return *find_if(world.units.begin(), world.units.end(), [id](const auto& unit) { return unit.id == id; });
