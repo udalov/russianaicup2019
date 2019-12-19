@@ -133,12 +133,16 @@ AllyData datas[2];
 int minAllyId;
 bool visualize = false;
 bool simulation = false;
+bool isInitialized = false;
 
 UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& debug) {
+    constexpr size_t trackLen = 80;
+
     auto tick = game.currentTick;
     auto myId = myUnit.id;
     auto& me = findUnit(game.world, myId);
-    if (tick == 0) {
+    if (!isInitialized) {
+        isInitialized = true;
         srand(42);
         if (params.find("--dump-constants") != params.end()) {
             dumpConstants(game.properties);
@@ -168,7 +172,6 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     });
     auto magazineAtStart = me.weapon ? me.weapon->magazine : -1;
 
-    constexpr size_t trackLen = 80;
     constexpr size_t tracksToSave = 10;
     constexpr size_t microticks = 4;
 
@@ -178,7 +181,7 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     auto tracks = generateTracks(trackLen, me, nearestEnemy);
     // cout << "### " << tick << " | " << tracks.size() << " tracks | " << me.toString() << endl;
     auto& savedTracks = data.savedTracks;
-    for (auto& track : savedTracks) track.push_back(track.back()), tracks.push_back(track);
+    tracks.insert(tracks.end(), savedTracks.begin(), savedTracks.end());
     savedTracks.clear();
 
     auto scores = vector<double>(tracks.size());
@@ -203,7 +206,13 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
 
     sort(indices.begin(), indices.end(), [&scores](auto& i1, auto& i2) { return scores[i1] > scores[i2]; });
 
-    for (size_t i = 0; i < tracksToSave && i < tracks.size(); i++) savedTracks.push_back(tracks[indices[i]]);
+    for (size_t i = 0; i < tracksToSave && i < tracks.size(); i++) {
+        // TODO: optimize
+        auto track = tracks[indices[i]];
+        track.erase(track.begin());
+        track.push_back(track.back());
+        savedTracks.emplace_back(track);
+    }
 
     if (visualize) {
         debug.log(renderWorld(myId, game.world));
