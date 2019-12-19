@@ -70,6 +70,61 @@ vector<Track> generateTracks(size_t len, const Unit& me, const Unit *nearestEnem
     return ans;
 }
 
+const int DX[] = {1, 0, -1, 0};
+const int DY[] = {0, 1, 0, -1};
+vector<int> TEMP_QUEUE;
+
+struct Paths {
+    vector<vector<Tile>> tiles;
+    size_t n, m;
+    vector<vector<int>> answers;
+
+    Paths(const vector<vector<Tile>>& tiles) : tiles(tiles), n(tiles.size()), m(tiles[0].size()),
+        answers(n * m, vector<int>(n * m, -1)) {}
+
+    constexpr int enc(size_t x, size_t y) const { return x * m + y; }
+
+    int distance(size_t x1, size_t y1, size_t x2, size_t y2) {
+        auto start = enc(x1, y1);
+        auto finish = enc(x2, y2);
+        auto& ans = answers.at(start);
+        if (ans[start] != -1) return ans[finish];
+
+        auto& q = TEMP_QUEUE;
+        q.clear();
+        q.push_back(start);
+        ans[start] = 0;
+        size_t qb = 0;
+        while (qb < q.size()) {
+            int v = q[qb++];
+            int x = v / m, y = v % m;
+            for (size_t d = 0; d < 4; d++) {
+                int xx = x + DX[d], yy = y + DY[d];
+                int vv = enc(xx, yy);
+                if (tiles[xx][yy] != Tile::WALL && ans[vv] == -1) {
+                    ans[vv] = ans[v] + 1;
+                    q.push_back(vv);
+                }
+            }
+        }
+
+        return ans[finish];
+    }
+
+    int distance(const Vec& from, const Vec& to) {
+        return distance(
+            static_cast<size_t>(from.x), static_cast<size_t>(from.y),
+            static_cast<size_t>(to.x), static_cast<size_t>(to.y)
+        );
+    }
+};
+
+unique_ptr<Paths> paths = nullptr;
+
+double smartDistance(const Vec& v, const Vec& w) {
+    return (paths->distance(v, w) + v.distance(w)) / 2.0;
+}
+
 double estimate(const World& world, int myId, int magazineAtStart, const Unit *nearestEnemy, const LootBox *nearestWeapon) {
     auto& me = findUnit(world, myId);
     auto score = 0.0;
@@ -84,9 +139,9 @@ double estimate(const World& world, int myId, int magazineAtStart, const Unit *n
     // if (!me.weapon || me.weapon->magazine == magazineAtStart) score -= 1000.0;
 
     if (!me.weapon && nearestWeapon) {
-        score += -100.0 - me.position.distance(nearestWeapon->position);
+        score += -100.0 - smartDistance(me.position, nearestWeapon->position);
     } else if (nearestEnemy) {
-        score += -10.0 - abs(me.position.distance(nearestEnemy->position) - 10.0);
+        score += -10.0 - abs(smartDistance(me.position, nearestEnemy->position) - 10.0);
     }
     return score;
 }
@@ -158,6 +213,8 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
                 minAllyId = min(minAllyId, unit.id);
             }
         }
+
+        paths = make_unique<Paths>(game.level.tiles);
     }
 
     if (simulation) return checkSimulation(myId, game, debug);

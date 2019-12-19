@@ -7,7 +7,7 @@ make -Cout -j4
 
 score1=0
 score2=0
-for i in `seq 1 40`
+for i in `seq 101 200`
 do
     scripts/create-config.py Local Quick Simple $i 3600 --custom-properties >out/config.json
     out/aicup2019 &
