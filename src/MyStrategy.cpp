@@ -178,12 +178,18 @@ int getMyHealthScore(const World& world, int playerId) {
     return ans;
 }
 
-bool needToShoot(const Unit& me, const Game& game, Track track, const Vec& aim) {
+Vec rotate(const Vec& v, double a) {
+    auto cosa = cos(a);
+    auto sina = sin(a);
+    return Vec(cosa * v.x - sina * v.y, sina * v.x + cosa * v.y);
+}
+
+bool needToShoot(const Unit& me, const Game& game, Track track, Vec& aim) {
     if (!me.weapon) return false;
     if (me.weapon->fireTimer > 0.0) return false;
     if (me.weapon->type != WeaponType::ROCKET_LAUNCHER) return true;
 
-    auto size = min(track.size(), 30ul);
+    auto size = min(track.size(), 20ul);
 
     auto world1 = game.world;
     simulate(
@@ -193,17 +199,38 @@ bool needToShoot(const Unit& me, const Game& game, Track track, const Vec& aim) 
     int expectedHealthScore = getMyHealthScore(world1, me.playerId);
 
     track[0].shoot = true;
-    track[0].aim = aim;
 
-    auto world2 = game.world;
-    simulate(
-        me.id, game.level, world2, track, 4, size,
-        [&](size_t tick, const World& world) { }
-    );
-    int actualHealthScore = getMyHealthScore(world2, me.playerId);
-    // cout << "### " << game.currentTick << " me " << me.toString() << " expected " << expectedHealthScore << " actual " << actualHealthScore;
-    // cout << " result " << findUnit(world2, me.id).toString() << endl;
-    return actualHealthScore >= expectedHealthScore;
+    double maxAverageActualHealthScore = 0.0;
+    auto changed = 0;
+    for (auto& shift : { 0, -1, 1 }) {
+        auto tryAim = rotate(aim, shift * me.weapon->spread);
+        double averageActualHealthScore = 0.0;
+        constexpr size_t tries = 10;
+        for (size_t i = 0; i < tries; i++) {
+            track[0].aim = tryAim;
+
+            auto world2 = game.world;
+            simulate(
+                me.id, game.level, world2, track, 4, size,
+                [&](size_t tick, const World& world) { }
+            );
+            int actualHealthScore = getMyHealthScore(world2, me.playerId);
+            averageActualHealthScore += actualHealthScore;
+        }
+        averageActualHealthScore /= tries;
+        if (averageActualHealthScore > maxAverageActualHealthScore) {
+            maxAverageActualHealthScore = averageActualHealthScore;
+            aim = tryAim;
+            changed = shift;
+        }
+    }
+
+    auto ans = maxAverageActualHealthScore >= expectedHealthScore;
+    /*
+    cout << "### " << game.currentTick << " me " << me.toString() << " expected " << expectedHealthScore << " actual " << maxAverageActualHealthScore;
+    cout << " -> " << (ans ? "FIRE" : "HOLD") << " aim " << changed << " " << aim.toString() << " " << atan2(aim.y, aim.x) << " " << me.weapon->spread << endl;
+    */
+    return ans;
 }
 
 struct AllyData {
