@@ -1,6 +1,7 @@
 #include "Bullet.hpp"
 
 #include "ExplosionParams.hpp"
+#include <stdexcept>
 
 using namespace std;
 
