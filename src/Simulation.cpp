@@ -48,7 +48,8 @@ void simulate(
 ) {
     auto& me = findUnit(world, myId);
     // TODO: use more microticks when bullet is nearby
-    auto alpha = 1.0 / ticksPerSecond / microticks;
+    auto delta = 1.0 / ticksPerSecond;
+    auto alpha = delta / microticks;
 
     auto& x = me.position.x;
     auto& y = me.position.y;
@@ -57,9 +58,6 @@ void simulate(
     auto half = ux / 2;
 
     for (size_t tick = 0; tick < ticks; tick++) {
-        auto closestLootBox = minBy<LootBox>(world.lootBoxes, [&me](const auto& box) {
-            return box.center().sqrDist(me.center());
-        });
         auto& move = track[tick];
         auto vx = min(max(move.velocity, -unitMaxHorizontalSpeed), unitMaxHorizontalSpeed) * alpha;
         auto vy = 0.0;
@@ -78,6 +76,33 @@ void simulate(
                 vy = -unitFallSpeed * alpha;
                 me.jumpState = JumpState::NO_JUMP;
             }
+        }
+
+        for (size_t i = 0; i < world.lootBoxes.size();) {
+            auto& box = world.lootBoxes[i];
+            if (!intersects(me, box)) { i++; continue; }
+            auto item = box.item;
+            if (item.isWeapon() && (!me.weapon || move.swapWeapon)) {
+                me.weapon = Weapon();
+                me.weapon->type = item.weaponType();
+                WeaponParams params;
+                switch (me.weapon->type) {
+                    case WeaponType::PISTOL: params = pistolParams; break;
+                    case WeaponType::ASSAULT_RIFLE: params = assaultRifleParams; break;
+                    case WeaponType::ROCKET_LAUNCHER: params = rocketLauncherParams; break;
+                }
+                me.weapon->params = params;
+                me.weapon->magazine = params.magazineSize;
+                me.weapon->spread = params.minSpread; // ???
+                me.weapon->fireTimer = params.reloadTime;
+                me.weapon->lastAngle = optional<double>(atan2(move.aim.y, move.aim.x));
+            } else if (item.isHealthPack() && item.health() > 0 && me.health < 100) {
+                me.health = min(me.health + item.health(), 100);
+            } else {
+                i++;
+                continue;
+            }
+            fastRemove(world.lootBoxes, box);
         }
 
         for (size_t mt = 0; mt < microticks; mt++) {
@@ -207,29 +232,6 @@ void simulate(
                     } else {
                         weapon->fireTimer = wp.fireRate;
                     }
-                }
-            }
-
-            if (closestLootBox && intersects(me, *closestLootBox)) {
-                auto item = closestLootBox->item;
-                if (item.isWeapon() && (!me.weapon || move.swapWeapon)) {
-                    me.weapon = Weapon();
-                    me.weapon->type = item.weaponType();
-                    WeaponParams params;
-                    switch (me.weapon->type) {
-                        case WeaponType::PISTOL: params = pistolParams; break;
-                        case WeaponType::ASSAULT_RIFLE: params = assaultRifleParams; break;
-                        case WeaponType::ROCKET_LAUNCHER: params = rocketLauncherParams; break;
-                    }
-                    me.weapon->params = params;
-                    me.weapon->magazine = params.magazineSize;
-                    me.weapon->spread = params.minSpread; // ???
-                    me.weapon->fireTimer = params.reloadTime;
-                    me.weapon->lastAngle = optional<double>(atan2(move.aim.y, move.aim.x));
-                    fastRemove(world.lootBoxes, *closestLootBox);
-                } else if (item.isHealthPack() && item.health() > 0 && me.health < 100) {
-                    me.health = min(me.health + item.health(), 100);
-                    fastRemove(world.lootBoxes, *closestLootBox);
                 }
             }
         }
