@@ -5,20 +5,22 @@ trap "kill 0" EXIT
 
 make -Cout -j4
 
+FROM=$1
+TO=$2
+[ $FROM ] || FROM=101
+[ $TO ] || TO=200
+
 score1=0
 score2=0
-for i in `seq 101 200`
-do
+for i in `seq $FROM $TO`; do
     scripts/create-config.py Local Quick Simple $i 3600 --custom-properties >out/config.json
     out/aicup2019 &
     ./aicup2019 --batch-mode --log-level ERROR --config out/config.json --save-results out/result.txt
     read first second < <(scripts/parse-result.py)
     echo $i $first $second
-    if (( $first > $second ));
-    then
+    if (( $first > $second )); then
         score1=$(($score1 + 2))
-    elif (( $first < $second ));
-    then
+    elif (( $first < $second )); then
         score2=$(($score2 + 2))
     else
         score1=$(($score1 + 1))

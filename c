@@ -11,31 +11,21 @@ SEED=
 LEN=
 ARGS=
 
-for arg
-do
-    if [ "$arg" == "-v" ]
-    then
-        NOVIS=
-        ARGS="$ARGS --vis"
-    elif [ -z "$SEED" ]
-    then
+for arg; do
+    if [[ "$arg" =~ ^-.* ]]; then
+        [ "$arg" == "--vis" ] && NOVIS=
+        ARGS="$ARGS $arg"
+    elif [ -z "$SEED" ]; then
         SEED=$arg
-    elif [ -z "$LEN" ]
-    then
+    elif [ -z "$LEN" ]; then
         LEN=$arg
     else
         ARGS="$ARGS $arg"
     fi
 done
 
-if [ -z "$SEED" ]
-then
-    SEED=42
-fi
-if [ -z "$LEN" ]
-then
-    LEN=3600
-fi
+[ "$SEED" ] || SEED=42
+[ "$LEN" ] || LEN=3600
 
 host=127.0.0.1
 port=31001
@@ -43,15 +33,13 @@ port=31001
 make -Cout -j4
 scripts/create-config.py $PLAYER1 $PLAYER2 Simple $SEED $LEN --custom-properties >out/config.json
 
-if [ "$PLAYER1" == "Local" ]
-then
+if [ "$PLAYER1" == "Local" ]; then
     out/aicup2019 $host $port $ARGS &
     port=$((port + 1))
 fi
 
-if [ "$PLAYER2" == "Local" ]
-then
-    out/aicup2019 $host $port $ARGS &
+if [ "$PLAYER2" == "Local" ]; then
+    out/aicup2019 $host $port &
 fi
 
 ./aicup2019 $NOVIS --log-level ERROR --config out/config.json --save-results out/result.txt --player-names $PLAYER1 $PLAYER2
