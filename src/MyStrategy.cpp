@@ -125,7 +125,28 @@ double smartDistance(const Vec& v, const Vec& w) {
     return (paths->distance(v, w) + v.distance(w)) / 2.0;
 }
 
-double estimate(const World& world, int myId, int magazineAtStart, const Unit *nearestEnemy, const LootBox *nearestWeapon) {
+double cosBetween(const Vec& v, const Vec& w) {
+    return v.dot(w) / sqrt(v.sqrLen() * w.sqrLen());
+}
+
+// Returns a value in [0, 1]; 0 is bad, 1 is good.
+double surroundScore(const World& world, const Unit& me) {
+    const Unit *ally = nullptr;
+    for (auto& unit : world.units) if (unit.id != me.id && unit.playerId == me.playerId) { ally = &unit; break; }
+    if (!ally) return 0.0;
+
+    auto ans = 0.0;
+    auto k = 0;
+    for (auto& enemy : world.units) if (enemy.playerId != me.playerId) {
+        ans += (1 - cosBetween(me.position - enemy.position, ally->position - enemy.position)) / 2.0;
+        k++;
+    }
+    return ans / k;
+}
+
+constexpr auto surroundScoreWeight = 10.0; // TODO
+
+double estimate(const World& world, int myId, int allyId, int magazineAtStart, const Unit *nearestEnemy, const LootBox *nearestWeapon) {
     auto& me = findUnit(world, myId);
     auto score = 0.0;
     for (auto& unit : world.units) {
@@ -143,6 +164,9 @@ double estimate(const World& world, int myId, int magazineAtStart, const Unit *n
     } else if (nearestEnemy) {
         score += -10.0 - abs(smartDistance(me.position, nearestEnemy->position) - 10.0);
     }
+
+    score += surroundScore(world, me) * surroundScoreWeight;
+
     return score;
 }
 
@@ -190,6 +214,7 @@ struct AllyData {
 
 AllyData datas[2];
 int minAllyId;
+int maxAllyId;
 bool visualize = false;
 bool simulation = false;
 bool isInitialized = false;
@@ -212,9 +237,11 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         visualize = params.find("--vis") != params.end();
 
         minAllyId = numeric_limits<int>::max();
+        maxAllyId = numeric_limits<int>::min();
         for (auto& unit : game.world.units) {
             if (unit.playerId == me.playerId) {
                 minAllyId = min(minAllyId, unit.id);
+                maxAllyId = max(maxAllyId, unit.id);
             }
         }
 
@@ -224,6 +251,9 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     if (simulation) return checkSimulation(myId, game, debug);
 
     auto& data = datas[me.id != minAllyId];
+
+    auto allyId = minAllyId + maxAllyId - myId;
+    if (none_of(game.world.units.begin(), game.world.units.end(), [allyId](const auto& unit) { return unit.id == allyId; })) allyId = -1;
 
     auto nearestEnemy = minBy<Unit>(game.world.units, [&me](const auto& other) {
         return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
@@ -255,7 +285,7 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
             [&](size_t tick, const World& world) {
                 if (tick >= estimateCutoff && tick % estimateEveryNth == 0) {
                     auto coeff = (trackLen - tick) / (double)(trackLen - estimateCutoff) * 0.5 + 0.5;
-                    score += coeff * estimate(world, myId, magazineAtStart, nearestEnemy, nearestWeapon);
+                    score += coeff * estimate(world, myId, allyId, magazineAtStart, nearestEnemy, nearestWeapon);
                 }
             }
         );
@@ -293,6 +323,13 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         track.consume();
         savedTracks.emplace_back(track);
     }
+
+    /*
+    if (myId == minAllyId) {
+        auto ss = surroundScore(game.world, me);
+        cout << "### " << tick << " ss=" << ss << " ss*w=" << ss * surroundScoreWeight << endl;
+    }
+    */
 
     return ans;
 }
