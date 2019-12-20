@@ -37,6 +37,11 @@ bool intersectsBullet(const Unit& unit, const Bullet& bullet, double eps = 0.0) 
     return intersects(unit, bullet.position, bullet.size + eps, bullet.size + eps);
 }
 
+bool intersectsUnit(const Unit& unit, const Unit& other) {
+    return abs(unit.position.x - other.position.x) <= unitSize.x &&
+        abs(unit.position.y - other.position.y) <= unitSize.y;
+}
+
 void simulate(
     int myId, const Level& level, World& world, const Track& track, int microticks, size_t ticks,
     const function<void(size_t, const World&)>& callback
@@ -137,6 +142,10 @@ void simulate(
                 x = ceil(x + half) - half - EPS;
             } else {
                 x += vx;
+
+                for (auto& unit : world.units) {
+                    if (unit.id != me.id && intersectsUnit(me, unit)) { x -= vx; break; }
+                }
             }
 
             auto hasJumpTime = me.jumpState.maxTime > 0.0;
@@ -163,6 +172,10 @@ void simulate(
                 vy = -unitFallSpeed * alpha;
             } else {
                 y += vy;
+
+                for (auto& unit : world.units) {
+                    if (unit.id != me.id && intersectsUnit(me, unit)) { y -= vy; break; }
+                }
             }
 
             if (level(x, y) == Tile::LADDER) {
