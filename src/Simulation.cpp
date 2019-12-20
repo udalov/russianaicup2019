@@ -37,20 +37,6 @@ bool intersectsBullet(const Unit& unit, const Bullet& bullet, double eps = 0.0) 
     return intersects(unit, bullet.position, bullet.size + eps, bullet.size + eps);
 }
 
-void removeUnreachableLootBoxes(const Unit& unit, World& world, size_t ticks) {
-    auto& loot = world.lootBoxes;
-    auto v = unit.center();
-    constexpr auto closenessX = unitSize.x + lootBoxSize.x;
-    constexpr auto closenessY = unitSize.y + lootBoxSize.y;
-    loot.erase(remove_if(loot.begin(), loot.end(), [&v, ticks](const auto& box) {
-        constexpr auto maxSpeedX = 10.0 / ticksPerSecond;
-        constexpr auto maxSpeedY = 20.0 / ticksPerSecond;
-        auto b = box.center();
-        return abs(v.x - b.x) > (unitSize.x + lootBoxSize.x) / 2 + maxSpeedX * ticks + EPS &&
-            abs(v.y - b.y) > (unitSize.y + lootBoxSize.y) / 2 + maxSpeedY * ticks + EPS;
-    }), loot.end());
-}
-
 void simulate(
     int myId, const Level& level, World& world, const Track& track, int microticks, size_t ticks,
     const function<void(size_t, const World&)>& callback
@@ -64,8 +50,6 @@ void simulate(
     auto ux = unitSize.x;
     auto uy = unitSize.y;
     auto half = ux / 2;
-
-    removeUnreachableLootBoxes(me, world, ticks);
 
     for (size_t tick = 0; tick < ticks; tick++) {
         auto closestLootBox = minBy<LootBox>(world.lootBoxes, [&me](const auto& box) {
