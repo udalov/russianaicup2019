@@ -3,6 +3,9 @@
 set -e
 trap "kill 0" EXIT
 
+PLAYER1=Local
+PLAYER2=Local
+
 make -Cout -j4
 
 FROM=$1
@@ -13,8 +16,11 @@ TO=$2
 score1=0
 score2=0
 for i in `seq $FROM $TO`; do
-    scripts/create-config.py Local Quick Simple $i 3600 --custom-properties >out/config.json
+    scripts/create-config.py $PLAYER1 $PLAYER2 Simple $i 3600 --custom-properties >out/config.json
     out/aicup2019 &
+    if [ "$PLAYER2" == "Local" ]; then
+        out/prev 127.0.0.1 31002 &
+    fi
     ./aicup2019 --batch-mode --log-level ERROR --config out/config.json --save-results out/result.txt
     read first second < <(scripts/parse-result.py)
     echo $i $first $second

@@ -39,7 +39,7 @@ if [ "$PLAYER1" == "Local" ]; then
 fi
 
 if [ "$PLAYER2" == "Local" ]; then
-    out/aicup2019 $host $port &
+    out/prev $host $port &
 fi
 
 ./aicup2019 $NOVIS --log-level ERROR --config out/config.json --save-results out/result.txt --player-names $PLAYER1 $PLAYER2
