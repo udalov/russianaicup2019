@@ -43,13 +43,11 @@ bool intersectsUnit(const Unit& unit, const Unit& other) {
 }
 
 void simulate(
-    int myId, const Level& level, World& world, const Track& track, int microticks, size_t ticks,
+    int myId, const Level& level, World& world, const Track& track, int defaultMicroticks, size_t ticks,
     const function<void(size_t, const World&)>& callback
 ) {
     auto& me = findUnit(world, myId);
-    // TODO: use more microticks when bullet is nearby
     auto delta = 1.0 / ticksPerSecond;
-    auto alpha = delta / microticks;
 
     auto& x = me.position.x;
     auto& y = me.position.y;
@@ -58,6 +56,10 @@ void simulate(
     auto half = ux / 2;
 
     for (size_t tick = 0; tick < ticks; tick++) {
+        // TODO: add parameter
+        auto microticks = tick < 5 ? 100 : defaultMicroticks;
+        auto alpha = delta / microticks;
+
         auto& move = track[tick];
         auto vx = min(max(move.velocity, -unitMaxHorizontalSpeed), unitMaxHorizontalSpeed) * alpha;
         auto vy = 0.0;
