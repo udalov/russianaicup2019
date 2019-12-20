@@ -13,7 +13,7 @@ using namespace std;
 MyStrategy::MyStrategy() : params() {}
 MyStrategy::MyStrategy(unordered_map<string, string> params) : params(move(params)) {}
 
-vector<Track> generateTracks(size_t len, const Unit& me, const Unit *nearestEnemy) {
+vector<Track> generateTracks(size_t len, const Unit& me, const Unit *nearestEnemy, size_t randomTracks) {
     vector<Track> ans;
     Track t(len);
     /*
@@ -33,7 +33,7 @@ vector<Track> generateTracks(size_t len, const Unit& me, const Unit *nearestEnem
     for (size_t i = 0; i < len; i++) t[i].velocity = 10.0, t[i].jump = false, t[i].jumpDown = true; ans.push_back(t);
     for (size_t i = 0; i < len; i++) t[i].velocity = -10.0, t[i].jump = false, t[i].jumpDown = true; ans.push_back(t);
 
-    for (size_t times = 0; times < 100; times++) {
+    for (size_t times = 0; times < randomTracks; times++) {
         size_t t1 = rand() % ans.size();
         size_t t2;
         do {
@@ -269,7 +269,9 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     constexpr size_t estimateCutoff = 20;
     constexpr size_t estimateEveryNth = 10;
 
-    auto tracks = generateTracks(trackLen, me, nearestEnemy);
+    size_t randomTracks = params.find("--quick") != params.end() ? 10 : 100;
+
+    auto tracks = generateTracks(trackLen, me, nearestEnemy, randomTracks);
     // cout << "### " << tick << " | " << tracks.size() << " tracks | " << me.toString() << endl;
     auto& savedTracks = data.savedTracks;
     tracks.insert(tracks.end(), savedTracks.begin(), savedTracks.end());
