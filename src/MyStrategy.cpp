@@ -117,7 +117,7 @@ double surroundScore(const World& world, const Unit& me) {
 
 constexpr auto surroundScoreWeight = 10.0; // TODO
 
-double estimate(const World &world, int myId, const Unit *nearestEnemy, const LootBox *nearestWeapon) {
+double estimate(const World &world, int myId, const Unit *nearestEnemy, const LootBox *nearestWeapon, double desiredDistanceToEnemy) {
     auto& me = findUnit(world, myId);
     auto score = 0.0;
     for (auto& unit : world.units) {
@@ -130,7 +130,7 @@ double estimate(const World &world, int myId, const Unit *nearestEnemy, const Lo
     if (!me.weapon && nearestWeapon) {
         score += -100.0 - smartDistance(me.position, nearestWeapon->position);
     } else if (nearestEnemy) {
-        score += -10.0 - abs(smartDistance(me.position, nearestEnemy->position) - 10.0);
+        score += -10.0 - abs(smartDistance(me.position, nearestEnemy->position) - desiredDistanceToEnemy);
     }
 
     score += surroundScore(world, me) * surroundScoreWeight;
@@ -183,9 +183,11 @@ struct AllyData {
 AllyData datas[2];
 int minAllyId;
 int maxAllyId;
+bool isInitialized = false;
 bool visualize = false;
 bool simulation = false;
-bool isInitialized = false;
+bool quick = false;
+bool optimistic = false;
 
 UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& debug) {
     constexpr size_t trackLen = 80;
@@ -202,6 +204,8 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         checkConstants(game.properties);
         simulation = params.find("--simulate") != params.end();
         visualize = params.find("--vis") != params.end();
+        quick = params.find("--quick") != params.end();
+        optimistic = params.find("--optimistic") != params.end();
 
         minAllyId = numeric_limits<int>::max();
         maxAllyId = numeric_limits<int>::min();
@@ -235,13 +239,16 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     constexpr size_t estimateCutoff = 20;
     constexpr size_t estimateEveryNth = 10;
 
-    size_t randomTracks = params.find("--quick") != params.end() ? 10 : 100;
-
-    auto tracks = generateTracks(trackLen, me, randomTracks);
+    auto tracks = generateTracks(trackLen, me, quick ? 10 : 100);
     // cout << "### " << tick << " | " << tracks.size() << " tracks | " << me.toString() << endl;
     auto& savedTracks = data.savedTracks;
     tracks.insert(tracks.end(), savedTracks.begin(), savedTracks.end());
     savedTracks.clear();
+
+    bool isWinning = optimistic ||
+        (game.players[0].score > game.players[1].score) == (game.players[0].id == me.playerId);
+    // This value is equal to 10 at tick=1200, and to 5 at tick=3600.
+    auto desiredDistanceToEnemy = isWinning ? 10.0 : min((6000.0 - tick) / 480.0, 10.0);
 
     auto scores = vector<double>(tracks.size());
     for (size_t i = 0; i < tracks.size(); i++) {
@@ -253,7 +260,7 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
             [&](size_t tick, const World& world) {
                 if (tick >= estimateCutoff && tick % estimateEveryNth == 0) {
                     auto coeff = (double)(trackLen - tick) / (trackLen - estimateCutoff) * 0.5 + 0.5;
-                    score += coeff * estimate(world, myId, nearestEnemy, nearestWeapon);
+                    score += coeff * estimate(world, myId, nearestEnemy, nearestWeapon, desiredDistanceToEnemy);
                 }
             }
         );
