@@ -6,6 +6,6 @@
 #include <functional>
 
 void simulate(
-    int myId, const Level& level, World& world, const Track& moves, int microticks, size_t ticks,
-    const std::function<void(size_t, const World&)>& callback
+    int myId, const Level& level, World& world, const Track& track, int defaultMicroticks, size_t highResCutoff, size_t ticks,
+    const std::function<void(size_t, const World&)>& callback = [](auto ticks, auto& world) {}
 );

@@ -43,7 +43,7 @@ bool intersectsUnit(const Unit& unit, const Unit& other) {
 }
 
 void simulate(
-    int myId, const Level& level, World& world, const Track& track, int defaultMicroticks, size_t ticks,
+    int myId, const Level& level, World& world, const Track& track, int defaultMicroticks, size_t highResCutoff, size_t ticks,
     const function<void(size_t, const World&)>& callback
 ) {
     auto& me = findUnit(world, myId);
@@ -57,7 +57,7 @@ void simulate(
 
     for (size_t tick = 0; tick < ticks; tick++) {
         // TODO: add parameter
-        auto microticks = tick < 5 ? 100 : defaultMicroticks;
+        auto microticks = tick < highResCutoff ? updatesPerTick : defaultMicroticks;
         auto alpha = delta / microticks;
 
         auto& move = track[tick];

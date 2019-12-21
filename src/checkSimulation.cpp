@@ -148,7 +148,7 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
 
     constexpr size_t ticks = 300;
 
-    simulate(myId, game.level, world, *moves, updatesPerTick, ticks,
+    simulate(myId, game.level, world, *moves, updatesPerTick, 0, ticks,
              [myId, ticks, currentTick=game.currentTick, &debug](size_t tick, const World& world) {
         auto& me = findUnit(world, myId);
         if (tick > 10 && (tick + currentTick) % 10 == 0) {

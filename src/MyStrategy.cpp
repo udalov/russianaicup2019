@@ -10,6 +10,9 @@
 
 using namespace std;
 
+constexpr auto defaultHighResCutoff = 5;
+constexpr auto defaultMicroticks = 4;
+
 MyStrategy::MyStrategy() : params() {}
 MyStrategy::MyStrategy(unordered_map<string, string> params) : params(move(params)) {}
 
@@ -155,7 +158,7 @@ bool needToShoot(const Unit& me, const Game& game, Track track, Vec& aim) {
 
     auto world1 = game.world;
     simulate(
-        me.id, game.level, world1, track, 4, size,
+        me.id, game.level, world1, track, defaultMicroticks, defaultHighResCutoff, size,
         [&](size_t tick, const World& world) { }
     );
     int expectedHealthScore = getMyHealthScore(world1, me.playerId);
@@ -165,7 +168,7 @@ bool needToShoot(const Unit& me, const Game& game, Track track, Vec& aim) {
 
     auto world2 = game.world;
     simulate(
-        me.id, game.level, world2, track, 4, size,
+        me.id, game.level, world2, track, defaultMicroticks, defaultHighResCutoff, size,
         [&](size_t tick, const World& world) { }
     );
     int actualHealthScore = getMyHealthScore(world2, me.playerId);
@@ -234,7 +237,6 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     });
 
     constexpr size_t tracksToSave = 10;
-    constexpr size_t microticks = 4;
 
     constexpr size_t estimateCutoff = 20;
     constexpr size_t estimateEveryNth = 10;
@@ -256,7 +258,7 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         auto world = game.world;
         auto score = 0.0;
         simulate(
-            myId, game.level, world, track, microticks, min(track.size(), trackLen),
+            myId, game.level, world, track, defaultMicroticks, defaultHighResCutoff, min(track.size(), trackLen),
             [&](size_t tick, const World& world) {
                 if (tick >= estimateCutoff && tick % estimateEveryNth == 0) {
                     auto coeff = (double)(trackLen - tick) / (trackLen - estimateCutoff) * 0.5 + 0.5;
@@ -278,7 +280,7 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         debug.log(renderWorld(myId, game.world));
         auto w = game.world;
         simulate(
-            myId, game.level, w, bestTrack, microticks, 4,
+            myId, game.level, w, bestTrack, defaultMicroticks, defaultHighResCutoff, 4,
             [&](size_t tick, const World& world) {
                 debug.log(string("+") + to_string(tick) + " " + bestTrack[tick].toString() + " -> " + renderWorld(myId, world));
             }
