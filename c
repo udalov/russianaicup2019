@@ -5,8 +5,9 @@ trap "kill 0" EXIT
 
 make -Cout -j4
 
-P1=Local
-P2=Quick
+[ "$P1" ] || P1=Local
+[ "$P2" ] || P2=Quick
+[ "$LEVEL" ] || LEVEL=Simple
 
 BASE_PORT=31001
 LR_ARGS=--batch-mode

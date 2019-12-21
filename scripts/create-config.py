@@ -5,7 +5,7 @@ import json, sys
 # Args:
 # 1) First player
 # 2) Second player
-# 3) Path to the level, or "Simple"
+# 3) Path to the level, or "Simple" or "Complex"
 # 4) Seed
 # 5) Optional: max tick count
 # 6) Optional: other arguments, e.g. "--custom-properties"
@@ -21,11 +21,11 @@ def createLocal(port):
       }
     }
 
-level = "Simple"
-if sys.argv[3] != "Simple":
+level = sys.argv[3]
+if level != "Simple" and level != "Complex":
     level = {
       "LoadFrom": {
-        "path": sys.argv[3]
+        "path": level
       }
     }
 
