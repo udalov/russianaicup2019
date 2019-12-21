@@ -34,12 +34,12 @@ vector<Track> generateTracks(size_t len, const Unit& me, const Unit *nearestEnem
     for (size_t i = 0; i < len; i++) t[i].velocity = -10.0, t[i].jump = false, t[i].jumpDown = true; ans.push_back(t);
 
     for (size_t times = 0; times < randomTracks; times++) {
-        size_t t1 = rand() % ans.size();
+        size_t t1 = randomInt() % ans.size();
         size_t t2;
         do {
-            t2 = rand() % ans.size();
+            t2 = randomInt() % ans.size();
         } while (t1 == t2);
-        size_t mid = rand() % len;
+        size_t mid = randomInt() % len;
         for (size_t i = 0; i < mid; i++) t[i] = ans[t1][i];
         for (size_t i = mid; i < len; i++) t[i] = ans[t2][i];
         ans.push_back(t);
@@ -254,7 +254,6 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     auto& me = findUnit(game.world, myId);
     if (!isInitialized) {
         isInitialized = true;
-        srand(42);
         if (params.find("--dump-constants") != params.end()) {
             dumpConstants(game.properties);
             terminate();

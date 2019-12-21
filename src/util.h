@@ -7,6 +7,12 @@
 #include <string>
 #include <vector>
 
+inline int randomInt() { 
+    static unsigned int randomSeed = 42;
+    randomSeed = 214013 * randomSeed + 2531011; 
+    return (randomSeed >> 16) & 0x7FFF; 
+} 
+
 inline Unit& findUnit(World& world, int id) {
     return *find_if(world.units.begin(), world.units.end(), [id](const auto& unit) { return unit.id == id; });
 }
