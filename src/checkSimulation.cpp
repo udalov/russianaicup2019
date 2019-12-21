@@ -10,7 +10,7 @@
 
 using namespace std;
 
-unique_ptr<Track> getRandomMoveSequence(int microticks, const Vec& aim) {
+unique_ptr<Track> getRandomMoveSequence(const Vec &aim) {
     size_t cp1 = 13;
     size_t cp2 = 25;
     size_t cp3 = 186;
@@ -117,8 +117,7 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
         return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
     });
 
-    auto microticks = updatesPerTick;
-    static auto moves = getRandomMoveSequence(microticks, /* nearestEnemy->position - me.position */ Vec(0, -1));
+    static auto moves = getRandomMoveSequence( /* nearestEnemy->position - me.position */ Vec(0, -1));
     UnitAction ans;
 
     auto tick = game.currentTick;
@@ -149,7 +148,7 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
 
     constexpr size_t ticks = 300;
 
-    simulate(myId, game.level, world, *moves, microticks, ticks,
+    simulate(myId, game.level, world, *moves, updatesPerTick, ticks,
              [myId, ticks, currentTick=game.currentTick, &debug](size_t tick, const World& world) {
         auto& me = findUnit(world, myId);
         if (tick > 10 && (tick + currentTick) % 10 == 0) {

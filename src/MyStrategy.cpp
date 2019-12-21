@@ -13,16 +13,9 @@ using namespace std;
 MyStrategy::MyStrategy() : params() {}
 MyStrategy::MyStrategy(unordered_map<string, string> params) : params(move(params)) {}
 
-vector<Track> generateTracks(size_t len, const Unit& me, const Unit *nearestEnemy, size_t randomTracks) {
+vector<Track> generateTracks(size_t len, const Unit &me, size_t randomTracks) {
     vector<Track> ans;
     Track t(len);
-    /*
-    if (nearestEnemy) {
-        for (size_t i = 0; i < len; i++) {
-            t[i].aim = nearestEnemy->position - me.position;
-        }
-    }
-    */
     ans.push_back(t);
     for (size_t i = 0; i < len; i++) t[i].velocity = 10.0; ans.push_back(t);
     for (size_t i = 0; i < len; i++) t[i].velocity = -10.0; ans.push_back(t);
@@ -45,28 +38,6 @@ vector<Track> generateTracks(size_t len, const Unit& me, const Unit *nearestEnem
         ans.push_back(t);
     }
 
-    /*
-    size_t shootTick = -1;
-    auto& weapon = me.weapon;
-    if (weapon.has_value()) {
-        auto timer = weapon->fireTimer;
-        for (size_t i = 0; i < len; i++) {
-            if (timer <= 0.0) {
-                shootTick = i;
-                break;
-            }
-            timer -= 1.0 / ticksPerSecond;
-        }
-        if (shootTick >= 0) {
-            size_t sz = ans.size();
-            for (size_t j = 0; j < sz; j++) {
-                t = ans[j];
-                t[shootTick].shoot = true;
-                ans.push_back(t);
-            }
-        }
-    }
-    */
     return ans;
 }
 
@@ -79,10 +50,10 @@ struct Paths {
     size_t n, m;
     vector<vector<int>> answers;
 
-    Paths(const vector<vector<Tile>>& tiles) : tiles(tiles), n(tiles.size()), m(tiles[0].size()),
+    explicit Paths(const vector<vector<Tile>>& tiles) : tiles(tiles), n(tiles.size()), m(tiles[0].size()),
         answers(n * m, vector<int>(n * m, -1)) {}
 
-    constexpr int enc(size_t x, size_t y) const { return x * m + y; }
+    constexpr size_t enc(size_t x, size_t y) const { return x * m + y; }
 
     int distance(size_t x1, size_t y1, size_t x2, size_t y2) {
         auto start = enc(x1, y1);
@@ -96,11 +67,11 @@ struct Paths {
         ans[start] = 0;
         size_t qb = 0;
         while (qb < q.size()) {
-            int v = q[qb++];
-            int x = v / m, y = v % m;
+            auto v = q[qb++];
+            auto x = v / m, y = v % m;
             for (size_t d = 0; d < 4; d++) {
-                int xx = x + DX[d], yy = y + DY[d];
-                int vv = enc(xx, yy);
+                auto xx = x + DX[d], yy = y + DY[d];
+                auto vv = enc(xx, yy);
                 if (tiles[xx][yy] != Tile::WALL && ans[vv] == -1) {
                     ans[vv] = ans[v] + 1;
                     q.push_back(vv);
@@ -146,7 +117,7 @@ double surroundScore(const World& world, const Unit& me) {
 
 constexpr auto surroundScoreWeight = 10.0; // TODO
 
-double estimate(const World& world, int myId, int allyId, int magazineAtStart, const Unit *nearestEnemy, const LootBox *nearestWeapon) {
+double estimate(const World &world, int myId, const Unit *nearestEnemy, const LootBox *nearestWeapon) {
     auto& me = findUnit(world, myId);
     auto score = 0.0;
     for (auto& unit : world.units) {
@@ -155,9 +126,6 @@ double estimate(const World& world, int myId, int allyId, int magazineAtStart, c
         else score -= unit.health;
     }
     score *= 10000;
-
-    // Hack
-    // if (!me.weapon || me.weapon->magazine == magazineAtStart) score -= 1000.0;
 
     if (!me.weapon && nearestWeapon) {
         score += -100.0 - smartDistance(me.position, nearestWeapon->position);
@@ -179,9 +147,9 @@ int getMyHealthScore(const World& world, int playerId) {
 }
 
 Vec rotate(const Vec& v, double a) {
-    auto cosa = cos(a);
-    auto sina = sin(a);
-    return Vec(cosa * v.x - sina * v.y, sina * v.x + cosa * v.y);
+    auto cosA = cos(a);
+    auto sinA = sin(a);
+    return Vec(cosA * v.x - sinA * v.y, sinA * v.x + cosA * v.y);
 }
 
 bool needToShoot(const Unit& me, const Game& game, Track track, Vec& aim) {
@@ -201,7 +169,6 @@ bool needToShoot(const Unit& me, const Game& game, Track track, Vec& aim) {
     track[0].shoot = true;
 
     double maxAverageActualHealthScore = 0.0;
-    auto changed = 0;
     for (auto& shift : { 0, -1, 1 }) {
         auto tryAim = rotate(aim, shift * me.weapon->spread);
         double averageActualHealthScore = 0.0;
@@ -221,7 +188,6 @@ bool needToShoot(const Unit& me, const Game& game, Track track, Vec& aim) {
         if (averageActualHealthScore > maxAverageActualHealthScore) {
             maxAverageActualHealthScore = averageActualHealthScore;
             aim = tryAim;
-            changed = shift;
         }
     }
 
@@ -236,7 +202,7 @@ bool needToShoot(const Unit& me, const Game& game, Track track, Vec& aim) {
 struct AllyData {
     vector<Track> savedTracks;
 
-    AllyData() : savedTracks() {}
+    AllyData() noexcept : savedTracks() {}
 };
 
 AllyData datas[2];
@@ -287,7 +253,6 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     auto nearestWeapon = minBy<LootBox>(game.world.lootBoxes, [&me](const auto& box) {
         return box.item.isWeapon() ? me.position.sqrDist(box.position) : 1e100;
     });
-    auto magazineAtStart = me.weapon ? me.weapon->magazine : -1;
 
     constexpr size_t tracksToSave = 10;
     constexpr size_t microticks = 4;
@@ -297,7 +262,7 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
 
     size_t randomTracks = params.find("--quick") != params.end() ? 10 : 100;
 
-    auto tracks = generateTracks(trackLen, me, nearestEnemy, randomTracks);
+    auto tracks = generateTracks(trackLen, me, randomTracks);
     // cout << "### " << tick << " | " << tracks.size() << " tracks | " << me.toString() << endl;
     auto& savedTracks = data.savedTracks;
     tracks.insert(tracks.end(), savedTracks.begin(), savedTracks.end());
@@ -312,8 +277,8 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
             myId, game.level, world, track, microticks, min(track.size(), trackLen),
             [&](size_t tick, const World& world) {
                 if (tick >= estimateCutoff && tick % estimateEveryNth == 0) {
-                    auto coeff = (trackLen - tick) / (double)(trackLen - estimateCutoff) * 0.5 + 0.5;
-                    score += coeff * estimate(world, myId, allyId, magazineAtStart, nearestEnemy, nearestWeapon);
+                    auto coeff = (double)(trackLen - tick) / (trackLen - estimateCutoff) * 0.5 + 0.5;
+                    score += coeff * estimate(world, myId, nearestEnemy, nearestWeapon);
                 }
             }
         );
