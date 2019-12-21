@@ -67,6 +67,8 @@ void simulate(
         if (me.onLadder) {
             if (move.jump) {
                 vy = me.jumpState.speed * alpha;
+            } else if (move.jumpDown) {
+                vy = -unitFallSpeed * alpha;
             }
         } else {
             if (
