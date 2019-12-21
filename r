@@ -3,10 +3,12 @@
 set -e
 trap "kill 0" EXIT
 
-PLAYER1=Local
-PLAYER2=Local
-
 make -Cout -j4
+
+[ "$P1" ] || P1=Local
+[ "$P2" ] || P2=Local
+
+LR_ARGS=--batch-mode
 
 from=$1
 to=$2
@@ -26,12 +28,9 @@ for i in $(seq $from $to); do
     printf "%0$((WIDTH - progress))d" 0 | tr 0 '.'
     printf "] $to | $score1 $score2\r"
 
-    scripts/create-config.py $PLAYER1 $PLAYER2 Simple $i 3600 --custom-properties >out/config.json
-    out/aicup2019 &
-    if [ "$PLAYER2" == "Local" ]; then
-        out/prev 127.0.0.1 31002 &
-    fi
-    ./aicup2019 --batch-mode --log-level ERROR --config out/config.json --save-results out/result.txt
+    SEED=$i
+    source scripts/run-game.sh
+
     read first second < <(scripts/parse-result.py)
     printf "                                                                    \r"
     echo $i $first $second

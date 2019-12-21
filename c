@@ -3,17 +3,19 @@
 set -e
 trap "kill 0" EXIT
 
-PLAYER1=Local
-PLAYER2=Quick
+make -Cout -j4
 
-NOVIS=--batch-mode
+P1=Local
+P2=Quick
+
+LR_ARGS=--batch-mode
 SEED=
 LEN=
 ARGS=
 
 for arg; do
     if [[ "$arg" =~ ^-.* ]]; then
-        [ "$arg" == "--vis" ] && NOVIS=
+        [ "$arg" == "--vis" ] && LR_ARGS=
         ARGS="$ARGS $arg"
     elif [ -z "$SEED" ]; then
         SEED=$arg
@@ -25,24 +27,9 @@ for arg; do
 done
 
 [ "$SEED" ] || SEED=42
-[ "$LEN" ] || LEN=3600
 
-host=127.0.0.1
-port=31001
+source scripts/run-game.sh
 
-make -Cout -j4
-scripts/create-config.py $PLAYER1 $PLAYER2 Simple $SEED $LEN --custom-properties >out/config.json
-
-if [ "$PLAYER1" == "Local" ]; then
-    out/aicup2019 $host $port $ARGS &
-    port=$((port + 1))
-fi
-
-if [ "$PLAYER2" == "Local" ]; then
-    out/prev $host $port &
-fi
-
-./aicup2019 $NOVIS --log-level ERROR --config out/config.json --save-results out/result.txt --player-names $PLAYER1 $PLAYER2
 test -s out/result.txt && scripts/parse-result.py
 
 wait
