@@ -10,16 +10,11 @@ import json, sys
 # 5) Optional: max tick count
 # 6) Optional: other arguments, e.g. "--custom-properties"
 
-port = 31001
-
-def createLocal():
-    global port
-    newPort = port
-    port += 1
+def createLocal(port):
     return {
       "Tcp": {
         "host": None,
-        "port": newPort,
+        "port": port,
         "accept_timeout": None,
         "timeout": None,
         "token": None
@@ -67,8 +62,8 @@ for i in range(1, 3):
         players.append("Keyboard")
     elif arg == "Empty":
         players.append({"Empty": None})
-    elif arg == "Local":
-        players.append(createLocal())
+    elif arg[:5] == "Local":
+        players.append(createLocal(int(arg[5:])))
     else:
         raise Exception("Unknown player: " + arg)
 

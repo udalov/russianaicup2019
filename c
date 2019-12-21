@@ -8,6 +8,7 @@ make -Cout -j4
 P1=Local
 P2=Quick
 
+BASE_PORT=31001
 LR_ARGS=--batch-mode
 SEED=
 LEN=
@@ -30,6 +31,6 @@ done
 
 source scripts/run-game.sh
 
-test -s out/result.txt && scripts/parse-result.py
+scripts/parse-result.py $BASE_PORT
 
 wait

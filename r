@@ -9,6 +9,7 @@ make -Cout -j4
 [ "$P2" ] || P2=Local
 
 LR_ARGS=--batch-mode
+BASE_PORT=$((10000 + RANDOM % 20000))
 
 from=$1
 to=$2
@@ -31,7 +32,7 @@ for i in $(seq $from $to); do
     SEED=$i
     source scripts/run-game.sh
 
-    read first second < <(scripts/parse-result.py)
+    read first second < <(scripts/parse-result.py $BASE_PORT)
     printf "                                                                    \r"
     echo $i $first $second
     if (( $first > $second )); then

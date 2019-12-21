@@ -13,19 +13,24 @@ fail() { echo "$1" >&2; exit 1; }
 [ "$LEN" ] || LEN=3600
 [ "$BASE_PORT" ] || BASE_PORT=31001
 
-port=$BASE_PORT
+port1=$BASE_PORT
+port2=$((port1 + 1))
 
-scripts/create-config.py $P1 $P2 Simple $SEED $LEN --custom-properties >out/config.json
+if [ $P1 == Local ]; then P1="$P1$port1"; fi
+if [ $P2 == Local ]; then P2="$P2$port2"; fi
 
-if [ "$P1" == "Local" ]; then
-    out/aicup2019 127.0.0.1 $port $ARGS &
-    port=$((port + 1))
+config=out/config-$BASE_PORT.json
+result=out/result-$BASE_PORT.txt
+scripts/create-config.py $P1 $P2 Simple $SEED $LEN --custom-properties >$config
+
+if [[ $P1 == Local* ]]; then
+    out/aicup2019 127.0.0.1 $port1 $ARGS &
 fi
 
-if [ "$P2" == "Local" ]; then
-    out/prev 127.0.0.1 $port $PREV_ARGS &
+if [[ $P2 == Local* ]]; then
+    out/prev 127.0.0.1 $port2 $PREV_ARGS &
 fi
 
-./aicup2019 $LR_ARGS --log-level ERROR --config out/config.json --save-results out/result.txt --player-names $P1 $P2
+./aicup2019 $LR_ARGS --log-level ERROR --config $config --save-results $result --player-names $P1 $P2
 
 wait
