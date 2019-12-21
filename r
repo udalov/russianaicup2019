@@ -8,14 +8,24 @@ PLAYER2=Local
 
 make -Cout -j4
 
-FROM=$1
-TO=$2
-[ $FROM ] || FROM=101
-[ $TO ] || TO=200
+from=$1
+to=$2
+[ $from ] || from=101
+[ $to ] || to=200
 
+WIDTH=20
 score1=0
 score2=0
-for i in `seq $FROM $TO`; do
+
+for i in $(seq $from $to); do
+    completed=$((i - from))
+    outof=$((to - from + 1))
+    progress=$((completed * WIDTH / outof))
+    printf "$completed/$outof | $from ["
+    printf "%0${progress}d" 0 | tr 0 '*'
+    printf "%0$((WIDTH - progress))d" 0 | tr 0 '.'
+    printf "] $to | $score1 $score2\r"
+
     scripts/create-config.py $PLAYER1 $PLAYER2 Simple $i 3600 --custom-properties >out/config.json
     out/aicup2019 &
     if [ "$PLAYER2" == "Local" ]; then
@@ -23,19 +33,18 @@ for i in `seq $FROM $TO`; do
     fi
     ./aicup2019 --batch-mode --log-level ERROR --config out/config.json --save-results out/result.txt
     read first second < <(scripts/parse-result.py)
+    printf "                                                                    \r"
     echo $i $first $second
     if (( $first > $second )); then
-        score1=$(($score1 + 2))
+        score1=$(python3 -c "print($score1+1)")
     elif (( $first < $second )); then
-        score2=$(($score2 + 2))
+        score2=$(python3 -c "print($score2+1)")
     else
-        score1=$(($score1 + 1))
-        score2=$(($score2 + 1))
+        score1=$(python3 -c "print($score1+0.5)")
+        score2=$(python3 -c "print($score2+0.5)")
     fi
 done
 
-score1=$(echo "scale=1;$score1/2.0" | bc -l)
-score2=$(echo "scale=1;$score2/2.0" | bc -l)
 echo "result $score1 $score2"
 
 wait
