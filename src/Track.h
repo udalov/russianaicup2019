@@ -16,7 +16,7 @@ struct Track {
         shift++;
     }
 
-    size_t size() const { return moves.size(); }
+    size_t size() const { return moves.size() - shift; }
 
     UnitAction& get(size_t index) { return moves[index + shift]; }
 

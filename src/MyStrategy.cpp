@@ -18,6 +18,8 @@ MyStrategy::MyStrategy(unordered_map<string, string> params) : params(move(param
 
 vector<Track> generateTracks(size_t len, const Unit &me, size_t randomTracks) {
     vector<Track> ans;
+    ans.reserve(9 + randomTracks);
+
     Track t(len);
     ans.push_back(t);
     for (size_t i = 0; i < len; i++) t[i].velocity = 10.0; ans.push_back(t);
@@ -120,7 +122,7 @@ double surroundScore(const World& world, const Unit& me) {
 
 constexpr auto surroundScoreWeight = 10.0; // TODO
 
-double estimate(const World &world, int myId, const Unit *nearestEnemy, const LootBox *nearestWeapon, double desiredDistanceToEnemy) {
+double estimate(const World &world, int myId, const Unit& nearestEnemy, const LootBox *nearestWeapon, double desiredDistanceToEnemy) {
     auto& me = findUnit(world, myId);
     auto score = 0.0;
     for (auto& unit : world.units) {
@@ -132,8 +134,8 @@ double estimate(const World &world, int myId, const Unit *nearestEnemy, const Lo
 
     if (!me.weapon && nearestWeapon) {
         score += -100.0 - smartDistance(me.position, nearestWeapon->position);
-    } else if (nearestEnemy) {
-        score += -10.0 - abs(smartDistance(me.position, nearestEnemy->position) - desiredDistanceToEnemy);
+    } else {
+        score += -10.0 - abs(smartDistance(me.position, nearestEnemy.position) - desiredDistanceToEnemy);
     }
 
     score += surroundScore(world, me) * surroundScoreWeight;
@@ -232,6 +234,7 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     auto nearestEnemy = minBy<Unit>(game.world.units, [&me](const auto& other) {
         return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
     });
+    if (!nearestEnemy) return UnitAction();
     auto nearestWeapon = minBy<LootBox>(game.world.lootBoxes, [&me](const auto& box) {
         return box.item.isWeapon() ? me.position.sqrDist(box.position) : 1e100;
     });
@@ -258,11 +261,11 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         auto world = game.world;
         auto score = 0.0;
         simulate(
-            myId, game.level, world, track, defaultMicroticks, defaultHighResCutoff, min(track.size(), trackLen),
+            myId, game.level, world, track, defaultMicroticks, defaultHighResCutoff, trackLen,
             [&](size_t tick, const World& world) {
                 if (tick >= estimateCutoff && tick % estimateEveryNth == 0) {
                     auto coeff = (double)(trackLen - tick) / (trackLen - estimateCutoff) * 0.5 + 0.5;
-                    score += coeff * estimate(world, myId, nearestEnemy, nearestWeapon, desiredDistanceToEnemy);
+                    score += coeff * estimate(world, myId, *nearestEnemy, nearestWeapon, desiredDistanceToEnemy);
                 }
             }
         );
