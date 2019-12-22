@@ -154,7 +154,10 @@ int getMyHealthScore(const World& world, int playerId) {
 bool needToShoot(const Unit& me, const Game& game, Track track, Vec& aim) {
     if (!me.weapon) return false;
     if (me.weapon->fireTimer > 0.0) return false;
-    if (me.weapon->type != WeaponType::ROCKET_LAUNCHER) return true;
+    // if (me.weapon->type != WeaponType::ROCKET_LAUNCHER) return true;
+    if (me.weapon->type != WeaponType::ROCKET_LAUNCHER && none_of(
+        game.world.units.begin(), game.world.units.end(), [&me](const auto& unit) { return unit.id != me.id && unit.playerId == me.playerId; }
+    )) return true;
 
     auto size = min(track.size(), 30ul);
 
