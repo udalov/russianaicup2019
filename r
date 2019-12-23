@@ -7,7 +7,7 @@ make -Cout -j4
 
 [ "$P1" ] || P1=Local
 [ "$P2" ] || P2=Local
-[ "$LEVEL" ] || LEVEL=Simple
+[ "$LEVEL" ] || LEVEL=Complex
 
 LR_ARGS=--batch-mode
 BASE_PORT=$((10000 + RANDOM % 20000))
