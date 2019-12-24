@@ -216,6 +216,8 @@ void simulate(
 
             if (level(x - half, y) == Tile::JUMP_PAD ||
                 level(x + half, y) == Tile::JUMP_PAD ||
+                level(x - half, y + uy/2) == Tile::JUMP_PAD ||
+                level(x + half, y + uy/2) == Tile::JUMP_PAD ||
                 level(x - half, y + uy) == Tile::JUMP_PAD ||
                 level(x + half, y + uy) == Tile::JUMP_PAD) {
                 me.jumpState = JumpState::JUMP_PAD_JUMP;
