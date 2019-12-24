@@ -8,6 +8,7 @@ fi
 fail() { echo "$1" >&2; exit 1; }
 [ "$P1" ] || fail "No P1"
 [ "$P2" ] || fail "No P2"
+[ "$TEAM_SIZE" ] || fail "No TEAM_SIZE"
 [ "$SEED" ] || fail "No SEED"
 [ "$LEVEL" ] || fail "No LEVEL"
 
@@ -22,7 +23,7 @@ if [ $P2 == Local ]; then P2="$P2$port2"; fi
 
 config=out/config-$BASE_PORT.json
 result=out/result-$BASE_PORT.txt
-scripts/create-config.py $P1 $P2 $LEVEL $SEED $LEN --custom-properties >$config
+scripts/create-config.py $P1 $P2 $LEVEL $SEED $LEN $TEAM_SIZE >$config
 
 if [[ $P1 == Local* ]]; then
     out/aicup2019 127.0.0.1 $port1 $ARGS &

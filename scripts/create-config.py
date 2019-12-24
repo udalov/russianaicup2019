@@ -8,7 +8,7 @@ import json, sys
 # 3) Path to the level, or "Simple" or "Complex"
 # 4) Seed
 # 5) Optional: max tick count
-# 6) Optional: other arguments, e.g. "--custom-properties"
+# 6) Optional: team size
 
 def createLocal(port):
     return {
@@ -32,12 +32,13 @@ if level != "Simple" and level != "Complex":
 seed = int(sys.argv[4])
 
 args = sys.argv[5:]
-if "--custom-properties" in args:
+if len(args) > 0:
     properties = json.load(open("scripts/properties.json", "r"))
     properties["max_tick_count"] = int(args[0])
-    properties["team_size"] = 2
-    # properties["ticks_per_second"] = 6000
-    # properties["updates_per_tick"] = 1
+    if len(args) > 1:
+        properties["team_size"] = int(args[1])
+    else:
+        properties["team_size"] = 2
 else:
     properties = None
 

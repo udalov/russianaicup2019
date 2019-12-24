@@ -7,6 +7,7 @@ make -Cout -j4
 
 [ "$P1" ] || P1=Local
 [ "$P2" ] || P2=Quick
+[ "$TEAM_SIZE" ] || TEAM_SIZE=2
 [ "$LEVEL" ] || LEVEL=Complex
 
 BASE_PORT=31001

@@ -7,6 +7,7 @@ make -Cout -j4
 
 [ "$P1" ] || P1=Local
 [ "$P2" ] || P2=Local
+[ "$TEAM_SIZE" ] || TEAM_SIZE=2
 [ "$LEVEL" ] || LEVEL=Complex
 
 LR_ARGS=--batch-mode
