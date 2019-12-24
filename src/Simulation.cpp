@@ -63,33 +63,6 @@ void simulate(
         auto& move = track[tick];
         auto vx = min(max(move.velocity, -unitMaxHorizontalSpeed), unitMaxHorizontalSpeed) * alpha;
 
-        for (size_t i = 0; i < world.lootBoxes.size();) {
-            auto& box = world.lootBoxes[i];
-            if (!intersects(me, box)) { i++; continue; }
-            auto item = box.item;
-            if (item.isWeapon() && (!me.weapon || move.swapWeapon)) {
-                me.weapon = Weapon();
-                me.weapon->type = item.weaponType();
-                WeaponParams params;
-                switch (me.weapon->type) {
-                    case WeaponType::PISTOL: params = pistolParams; break;
-                    case WeaponType::ASSAULT_RIFLE: params = assaultRifleParams; break;
-                    case WeaponType::ROCKET_LAUNCHER: params = rocketLauncherParams; break;
-                }
-                me.weapon->params = params;
-                me.weapon->magazine = params.magazineSize;
-                me.weapon->spread = params.minSpread; // ???
-                me.weapon->fireTimer = params.reloadTime;
-                me.weapon->lastAngle = optional<double>(atan2(move.aim.y, move.aim.x));
-            } else if (item.isHealthPack() && item.health() > 0 && me.health < 100) {
-                me.health = min(me.health + item.health(), 100);
-            } else {
-                i++;
-                continue;
-            }
-            fastRemove(world.lootBoxes, box);
-        }
-
         for (size_t mt = 0; mt < microticks; mt++) {
             for (size_t i = 0; i < world.bullets.size();) {
                 auto& bullet = world.bullets[i];
@@ -230,6 +203,33 @@ void simulate(
                     }
                 }
             }
+        }
+
+        for (size_t i = 0; i < world.lootBoxes.size();) {
+            auto& box = world.lootBoxes[i];
+            if (!intersects(me, box)) { i++; continue; }
+            auto item = box.item;
+            if (item.isWeapon() && (!me.weapon || move.swapWeapon)) {
+                me.weapon = Weapon();
+                me.weapon->type = item.weaponType();
+                WeaponParams params;
+                switch (me.weapon->type) {
+                    case WeaponType::PISTOL: params = pistolParams; break;
+                    case WeaponType::ASSAULT_RIFLE: params = assaultRifleParams; break;
+                    case WeaponType::ROCKET_LAUNCHER: params = rocketLauncherParams; break;
+                }
+                me.weapon->params = params;
+                me.weapon->magazine = params.magazineSize;
+                me.weapon->spread = params.minSpread; // ???
+                me.weapon->fireTimer = params.reloadTime;
+                me.weapon->lastAngle = nullopt;
+            } else if (item.isHealthPack() && item.health() > 0 && me.health < 100) {
+                me.health = min(me.health + item.health(), 100);
+            } else {
+                i++;
+                continue;
+            }
+            fastRemove(world.lootBoxes, box);
         }
 
         callback(tick, world);

@@ -76,7 +76,17 @@ bool isPredictionCorrect(int playerId, const World& last, const World& expected,
     auto& a = actual;
     if (e.units.size() != a.units.size()) return false;
     for (size_t i = 0; i < e.units.size(); i++) {
-        if (e.units[i].playerId == playerId && e.units[i].toString() != a.units[i].toString()) return false;
+        if (e.units[i].playerId != playerId) continue;
+
+        auto eu = e.units[i];
+        auto au = a.units[i];
+        if (eu.weapon.has_value() && !eu.weapon->lastAngle.has_value() &&
+            au.weapon.has_value() && !findUnit(last, au.id).weapon.has_value()) {
+            // Since we don't pick up loot boxes in microticks, ignore fire timer value right after picking up a weapon
+            eu.weapon->fireTimer = au.weapon->fireTimer;
+        }
+
+        if (eu.toString() != au.toString()) return false;
     }
 
     auto probablySame = [](const Bullet& b1, const Bullet& b2) {
