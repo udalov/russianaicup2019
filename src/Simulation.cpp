@@ -62,25 +62,6 @@ void simulate(
 
         auto& move = track[tick];
         auto vx = min(max(move.velocity, -unitMaxHorizontalSpeed), unitMaxHorizontalSpeed) * alpha;
-        auto vy = 0.0;
-
-        if (me.onLadder) {
-            if (move.jump) {
-                vy = me.jumpState.speed * alpha;
-            } else if (move.jumpDown) {
-                vy = -unitFallSpeed * alpha;
-            }
-        } else {
-            if (
-                me.jumpState.canJump && me.jumpState.maxTime >= -EPS &&
-                (move.jump || !me.jumpState.canCancel)
-            ) {
-                vy = me.jumpState.speed * alpha;
-            } else {
-                vy = -unitFallSpeed * alpha;
-                me.jumpState = JumpState::NO_JUMP;
-            }
-        }
 
         for (size_t i = 0; i < world.lootBoxes.size();) {
             auto& box = world.lootBoxes[i];
@@ -152,9 +133,23 @@ void simulate(
                 } else i++;
             }
 
-            if (!me.onLadder && me.jumpState.canJump && me.jumpState.maxTime >= -EPS &&
-                (move.jump || !me.jumpState.canCancel)) {
-                me.jumpState.maxTime -= alpha;
+            double vy;
+            if (me.onLadder) {
+                if (move.jump) {
+                    vy = me.jumpState.speed * alpha;
+                } else if (move.jumpDown) {
+                    vy = -unitFallSpeed * alpha;
+                } else {
+                    vy = 0.0;
+                }
+            } else {
+                if (me.jumpState.canJump && me.jumpState.maxTime >= -EPS && (move.jump || !me.jumpState.canCancel)) {
+                    vy = me.jumpState.speed * alpha;
+                    me.jumpState.maxTime -= alpha;
+                } else {
+                    vy = -unitFallSpeed * alpha;
+                    me.jumpState = JumpState::NO_JUMP;
+                }
             }
 
             if (vx < 0 && (
@@ -185,9 +180,6 @@ void simulate(
             )) {
                 y = floor(y) + EPS;
                 me.jumpState = JumpState::UNIT_JUMP;
-                if (move.jump) {
-                    vy = me.jumpState.speed * alpha;
-                }
             } else if (vy > 0 && !me.onLadder && (
                 !hasJumpTime ||
                 isWall(level, x - half, y + uy + vy) || isWall(level, x + half, y + uy + vy)
@@ -198,7 +190,6 @@ void simulate(
                     y += vy;
                 }
                 me.jumpState = JumpState::NO_JUMP;
-                vy = -unitFallSpeed * alpha;
             } else {
                 y += vy;
 
@@ -221,7 +212,6 @@ void simulate(
                 level(x - half, y + uy) == Tile::JUMP_PAD ||
                 level(x + half, y + uy) == Tile::JUMP_PAD) {
                 me.jumpState = JumpState::JUMP_PAD_JUMP;
-                vy = jumpPadJumpSpeed * alpha;
             }
 
             auto& weapon = me.weapon;
