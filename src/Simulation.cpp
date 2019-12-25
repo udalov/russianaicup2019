@@ -10,8 +10,8 @@ using namespace std;
 
 constexpr auto EPS = 1e-9;
 
-constexpr auto RL_EXPLOSION_EPS = 0.2;
-constexpr auto ENEMY_BULLET_RL_EPS = 0.2;
+constexpr auto RL_EXPLOSION_EPS = 0.1;
+constexpr auto ENEMY_BULLET_RL_EPS = 0.05;
 constexpr auto ENEMY_BULLET_OTHER_EPS = 0.01;
 
 bool isWall(const Level& level, double x, double y) {
