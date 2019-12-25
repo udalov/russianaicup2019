@@ -225,6 +225,8 @@ void simulate(
                 me.weapon->lastAngle = nullopt;
             } else if (item.isHealthPack() && item.health() > 0 && me.health < 100) {
                 me.health = min(me.health + item.health(), 100);
+            } else if (item.isMine()) {
+                me.mines++;
             } else {
                 i++;
                 continue;

@@ -11,18 +11,6 @@ string Item::toString() const {
         default: return "?";
     }
 }
-bool Item::isWeapon() const {
-    return data.index() == 1;
-}
-WeaponType Item::weaponType() const {
-    return *get_if<WeaponType>(&data);
-}
-bool Item::isHealthPack() const {
-    return data.index() == 0;
-}
-int Item::health() const {
-    return *get_if<int>(&data);
-}
 WeaponType readWeaponType(InputStream& stream) {
     switch (stream.readInt()) {
         case 0: return WeaponType::PISTOL;
@@ -35,7 +23,7 @@ Item Item::readFrom(InputStream& stream) {
     switch (stream.readInt()) {
         case 0: return Item(decltype(data)(stream.readInt()));
         case 1: return Item(decltype(data)(readWeaponType(stream)));
-        case 2: return Item(decltype(data)());
+        case 2: return Item(decltype(data)(tuple<>()));
         default: throw std::runtime_error("Unexpected discriminant value");
     }
 };

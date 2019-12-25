@@ -12,11 +12,13 @@ public:
     // Health amount, weapon type, or mine
     std::variant<int, WeaponType, std::tuple<>> data;
 
-    bool isWeapon() const;
-    WeaponType weaponType() const;
+    bool isHealthPack() const { return data.index() == 0; }
+    int health() const { return *std::get_if<int>(&data); }
 
-    bool isHealthPack() const;
-    int health() const;
+    bool isWeapon() const { return data.index() == 1; }
+    WeaponType weaponType() const { return *std::get_if<WeaponType>(&data); }
+
+    bool isMine() const { return data.index() == 2; }
 
     Item();
     Item(std::variant<int, WeaponType, std::tuple<>> data) : data(data) {}

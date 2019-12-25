@@ -28,5 +28,6 @@ string Unit::toString() const {
         // (stand ? "S" : ".") +
         // (onGround ? "G" : ".") +
         (onLadder ? "L" : ".") +
+        (mines > 0 ? " " + to_string(mines) + "M" : "") +
         (weapon.has_value() ? " {" + weapon->toString() + "}" : "");
 }
