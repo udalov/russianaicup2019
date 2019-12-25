@@ -106,6 +106,23 @@ void simulate(
                 } else i++;
             }
 
+            auto& weapon = me.weapon;
+            if (weapon.has_value()) {
+                if (weapon->fireTimer <= 0 && move.shoot) {
+                    auto& wp = weapon->params;
+                    auto& bp = wp.bullet;
+                    auto aim = move.aim;
+                    world.bullets.emplace_back(weapon->type, me.id, me.playerId, me.center(), aim.normalize() * bp.speed, bp.damage, bp.size);
+                    if (--weapon->magazine == 0) {
+                        weapon->magazine = wp.magazineSize;
+                        weapon->fireTimer = wp.reloadTime;
+                    } else {
+                        weapon->fireTimer = wp.fireRate;
+                    }
+                }
+                weapon->fireTimer -= alpha;
+            }
+
             double vy;
             if (me.onLadder) {
                 if (move.jump) {
@@ -190,23 +207,6 @@ void simulate(
                     me.jumpState = JumpState::UNIT_JUMP;
                 } else {
                     me.jumpState = JumpState::NO_JUMP;
-                }
-            }
-
-            auto& weapon = me.weapon;
-            if (weapon.has_value()) {
-                auto& wp = weapon->params;
-                weapon->fireTimer -= alpha;
-                if (weapon->fireTimer <= 0 && move.shoot) {
-                    auto& bp = wp.bullet;
-                    auto aim = move.aim;
-                    world.bullets.emplace_back(weapon->type, me.id, me.playerId, me.center(), aim.normalize() * bp.speed, bp.damage, bp.size);
-                    if (--weapon->magazine == 0) {
-                        weapon->magazine = wp.magazineSize;
-                        weapon->fireTimer = wp.reloadTime;
-                    } else {
-                        weapon->fireTimer = wp.fireRate;
-                    }
                 }
             }
         }
