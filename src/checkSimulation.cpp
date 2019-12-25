@@ -80,10 +80,9 @@ bool isPredictionCorrect(int playerId, const World& last, const World& expected,
 
         auto eu = e.units[i];
         auto au = a.units[i];
-        if (eu.weapon.has_value() && !eu.weapon->lastAngle.has_value() &&
-            au.weapon.has_value() && !findUnit(last, au.id).weapon.has_value()) {
-            // Since we don't pick up loot boxes in microticks, ignore fire timer value right after picking up a weapon
-            eu.weapon->fireTimer = au.weapon->fireTimer;
+        if (au.weapon.has_value() && !findUnit(last, au.id).weapon.has_value()) {
+            // Since we don't pick up loot boxes in microticks, ignore errors when picking up weapons
+            eu.weapon = au.weapon;
         }
 
         if (eu.toString() != au.toString()) return false;

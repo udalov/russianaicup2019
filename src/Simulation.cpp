@@ -29,7 +29,7 @@ bool intersects(const Unit& unit, const Vec& rectCenter, double sizeX, double si
         2 * abs(unitCenter.y - rectCenter.y) <= unitSize.y + sizeY;
 }
 
-bool intersects(const Unit& unit, const LootBox& box) {
+bool intersectsLootBox(const Unit& unit, const LootBox& box) {
     return intersects(unit, box.center(), lootBoxSize.x, lootBoxSize.y);
 }
 
@@ -211,9 +211,10 @@ void simulate(
             }
         }
 
+        // Ideally, loot boxes should be collected at the beginning of each microtick.
         for (size_t i = 0; i < world.lootBoxes.size();) {
             auto& box = world.lootBoxes[i];
-            if (!intersects(me, box)) { i++; continue; }
+            if (!intersectsLootBox(me, box)) { i++; continue; }
             auto item = box.item;
             if (item.isWeapon() && (!me.weapon || move.swapWeapon)) {
                 me.weapon = Weapon();
