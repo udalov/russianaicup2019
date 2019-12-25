@@ -89,7 +89,7 @@ bool isPredictionCorrect(int playerId, const World& last, const World& expected,
     }
 
     auto probablySame = [](const Bullet& b1, const Bullet& b2) {
-        return b1.position.sqrDist(b2.position) < 1e-3 && b1.velocity.sqrDist(b2.velocity) < 1e-3;
+        return b1.velocity.sqrDist(b2.velocity) < 1e-3;
     };
 
     for (auto& eb : e.bullets) {
