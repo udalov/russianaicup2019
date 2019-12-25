@@ -193,10 +193,15 @@ int minAllyId;
 int maxAllyId;
 bool isInitialized = false;
 bool visualize = false;
-bool simulation = false;
+bool simulateOneAction = false;
+bool checkSimulationOnPredefinedMoveSequence = false;
 bool quick = false;
 bool optimistic = false;
 bool batch = false;
+
+World lastWorld;
+World expectedWorld;
+UnitAction lastAction;
 
 UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& debug) {
     constexpr size_t trackLen = 160;
@@ -211,7 +216,8 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
             terminate();
         }
         checkConstants(game.properties);
-        simulation = params.find("--simulate") != params.end();
+        simulateOneAction = params.find("--simulate") != params.end();
+        checkSimulationOnPredefinedMoveSequence = params.find("--check-simulation") != params.end();
         batch = params.find("--batch") != params.end();
         visualize = params.find("--vis") != params.end();
         quick = params.find("--quick") != params.end();
@@ -229,7 +235,7 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         paths = make_unique<Paths>(game.level.tiles);
     }
 
-    if (simulation) return checkSimulation(myId, game, debug, batch, visualize);
+    if (checkSimulationOnPredefinedMoveSequence) return checkSimulation(myId, game, debug, batch, visualize);
 
     auto& data = datas[me.id != minAllyId];
 
@@ -315,6 +321,17 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         cout << "### " << tick << " ss=" << ss << " ss*w=" << ss * surroundScoreWeight << endl;
     }
     */
+
+    if (simulateOneAction) {
+        auto world = game.world;
+        bool ok = tick == 0 || isPredictionCorrect(me.playerId, lastWorld, expectedWorld, world);
+        reportPredictionDifference(myId, expectedWorld, game, lastAction, ok, false, tick);
+
+        simulate(myId, game.level, world, Track { ans }, updatesPerTick, 0, 1, 1);
+        expectedWorld = world;
+        lastWorld = game.world;
+        lastAction = ans;
+    }
 
     return ans;
 }

@@ -15,7 +15,7 @@ P2=Empty
 TEAM_SIZE=1 
 LEVEL=Complex
 LEN=300
-ARGS="--simulate --batch"
+ARGS="--check-simulation --batch"
 LR_ARGS=--batch-mode
 BASE_PORT=31110
 

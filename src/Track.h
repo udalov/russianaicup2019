@@ -10,6 +10,7 @@ struct Track {
 
     explicit Track(size_t len) : moves(len), shift() {}
     explicit Track(std::vector<UnitAction> moves) : moves(std::move(moves)), shift() {}
+    explicit Track(const std::initializer_list<UnitAction>& moves) : moves(moves.begin(), moves.end()), shift() {}
 
     void consume() {
         moves.push_back(moves.back());

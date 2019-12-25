@@ -115,11 +115,33 @@ bool isPredictionCorrect(int playerId, const World& last, const World& expected,
     return true;
 }
 
+void reportPredictionDifference(
+    int myId, const World& expectedWorld, const Game& actualGame, const UnitAction& lastAction,
+    bool isOk, bool logWorldAnyway, int tick
+) {
+    auto actual = renderWorld(myId, actualGame.world);
+    if (!isOk) {
+        cout << "-> " << lastAction.toString() << endl;
+    }
+    if (!isOk || logWorldAnyway) {
+        cout << tick << " " << actual << endl;
+    }
+    if (!isOk) {
+        auto expected = renderWorld(myId, expectedWorld);
+        cout << "ERROR! predicted:" << endl << tick << " " << expected << endl;
+        if (expected.substr(0, expected.find('\n')) != actual.substr(0, actual.find('\n'))) {
+            cout << surroundingToString(findUnit(actualGame.world, myId).position, actualGame.level);
+        } else {
+            cout << endl;
+        }
+    }
+}
+
 bool finished = false;
 int simulationErrors = 0;
-World lastWorld;
-World expectedWorld;
-UnitAction lastAction;
+static World lastWorld;
+static World expectedWorld;
+static UnitAction lastAction;
 
 UnitAction checkSimulation(int myId, const Game& game, Debug& debug, bool batch, bool visualize) {
     if (finished) return UnitAction();
@@ -135,22 +157,7 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug, bool batch,
     auto tick = game.currentTick;
     bool ok = tick == 0 || isPredictionCorrect(me.playerId, lastWorld, expectedWorld, game.world);
     if (!ok) simulationErrors++;
-    if (!batch) {
-        auto actual = renderWorld(myId, game.world);
-        if (!ok) {
-            cout << "-> " << lastAction.toString() << endl;
-        }
-        cout << tick << " " << actual << endl;
-        if (!ok) {
-            auto expected = renderWorld(myId, expectedWorld);
-            cout << "ERROR! predicted:" << endl << tick << " " << expected << endl;
-            if (expected.substr(0, expected.find('\n')) != actual.substr(0, actual.find('\n'))) {
-                cout << surroundingToString(findUnit(game.world, myId).position, game.level);
-            } else {
-                cout << endl;
-            }
-        }
-    }
+    if (!batch) reportPredictionDifference(myId, expectedWorld, game, lastAction, ok, true, tick);
 
     auto world = game.world;
     simulate(myId, game.level, world, *moves, updatesPerTick, 0, 1, 1, [&](size_t tick, const World& world) {
