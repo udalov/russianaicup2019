@@ -188,7 +188,7 @@ void simulate(
                 }
             }
 
-            if (level(x, y) == Tile::LADDER) {
+            if (level(x, y) == Tile::LADDER || level(x, y + uy/2) == Tile::LADDER) {
                 me.onLadder = true;
                 me.onGround = true;
                 me.jumpState = JumpState::UNIT_JUMP;
