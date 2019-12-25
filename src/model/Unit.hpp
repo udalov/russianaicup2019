@@ -16,11 +16,12 @@ public:
     int health;
     Vec2Double position;
     JumpState jumpState;
+    bool onGround;
     bool onLadder;
     int mines;
     std::optional<Weapon> weapon;
     Unit();
-    Unit(int playerId, int id, int health, Vec2Double position, JumpState jumpState, bool onLadder, int mines, std::optional<Weapon> weapon);
+    Unit(int playerId, int id, int health, Vec2Double position, JumpState jumpState, bool onGround, bool onLadder, int mines, std::optional<Weapon> weapon);
     static Unit readFrom(InputStream& stream);
     std::string toString() const;
 

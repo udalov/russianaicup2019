@@ -2,8 +2,8 @@
 
 using namespace std;
 
-Unit::Unit(): playerId(), id(), health(), position(), jumpState(), onLadder(), mines(), weapon() { }
-Unit::Unit(int playerId, int id, int health, Vec2Double position, JumpState jumpState, bool onLadder, int mines, optional<Weapon> weapon) : playerId(playerId), id(id), health(health), position(position), jumpState(jumpState), onLadder(onLadder), mines(mines), weapon(weapon) { }
+Unit::Unit(): playerId(), id(), health(), position(), jumpState(), onGround(), onLadder(), mines(), weapon() { }
+Unit::Unit(int playerId, int id, int health, Vec2Double position, JumpState jumpState, bool onGround, bool onLadder, int mines, optional<Weapon> weapon) : playerId(playerId), id(id), health(health), position(position), jumpState(jumpState), onGround(onGround), onLadder(onLadder), mines(mines), weapon(weapon) { }
 Unit Unit::readFrom(InputStream& stream) {
     Unit result;
     result.playerId = stream.readInt();
@@ -14,7 +14,7 @@ Unit Unit::readFrom(InputStream& stream) {
     result.jumpState = JumpState::readFrom(stream);
     stream.readBool(); // walkedRight
     stream.readBool(); // stand
-    stream.readBool(); // onGround
+    result.onGround = stream.readBool();
     result.onLadder = stream.readBool();
     result.mines = stream.readInt();
     result.weapon = stream.readBool() ? optional<Weapon>(Weapon::readFrom(stream)) : nullopt;
@@ -26,7 +26,7 @@ string Unit::toString() const {
         jumpState.toString() + " " +
         // (walkedRight ? "R" : ".") +
         // (stand ? "S" : ".") +
-        // (onGround ? "G" : ".") +
+        (onGround ? "G" : ".") +
         (onLadder ? "L" : ".") +
         (mines > 0 ? " " + to_string(mines) + "M" : "") +
         (weapon.has_value() ? " {" + weapon->toString() + "}" : "");

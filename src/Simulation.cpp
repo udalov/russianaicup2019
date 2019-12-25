@@ -118,10 +118,8 @@ void simulate(
             } else {
                 if (me.jumpState.canJump && me.jumpState.maxTime >= -EPS && (move.jump || !me.jumpState.canCancel)) {
                     vy = me.jumpState.speed * alpha;
-                    me.jumpState.maxTime -= alpha;
                 } else {
                     vy = -unitFallSpeed * alpha;
-                    me.jumpState = JumpState::NO_JUMP;
                 }
             }
 
@@ -145,14 +143,14 @@ void simulate(
                 }
             }
 
-            auto hasJumpTime = me.jumpState.maxTime > 0.0;
+            auto hasJumpTime = me.jumpState.maxTime > alpha;
             if (vy < 0 && floor(y + vy) != floor(y) && (
                 isWallOrPlatform(level, x - half, y + vy, move.jumpDown) ||
                 isWallOrPlatform(level, x + half, y + vy, move.jumpDown) ||
                 (level(x, y + vy) == Tile::LADDER && !move.jumpDown)
             )) {
                 y = floor(y) + EPS;
-                me.jumpState = JumpState::UNIT_JUMP;
+                me.onGround = true;
             } else if (vy > 0 && !me.onLadder && (
                 !hasJumpTime ||
                 isWall(level, x - half, y + uy + vy) || isWall(level, x + half, y + uy + vy)
@@ -162,9 +160,11 @@ void simulate(
                 } else {
                     y += vy;
                 }
-                me.jumpState = JumpState::NO_JUMP;
+                me.onGround = false;
+                me.jumpState.maxTime = -EPS;
             } else {
                 y += vy;
+                me.onGround = false;
 
                 for (auto& unit : world.units) {
                     if (unit.id != me.id && intersectsUnit(me, unit)) { y -= vy; break; }
@@ -173,18 +173,24 @@ void simulate(
 
             if (level(x, y) == Tile::LADDER) {
                 me.onLadder = true;
+                me.onGround = true;
                 me.jumpState = JumpState::UNIT_JUMP;
-            } else {
-                me.onLadder = false;
-            }
-
-            if (level(x - half, y) == Tile::JUMP_PAD ||
+            } else if (level(x - half, y) == Tile::JUMP_PAD ||
                 level(x + half, y) == Tile::JUMP_PAD ||
                 level(x - half, y + uy/2) == Tile::JUMP_PAD ||
                 level(x + half, y + uy/2) == Tile::JUMP_PAD ||
                 level(x - half, y + uy) == Tile::JUMP_PAD ||
                 level(x + half, y + uy) == Tile::JUMP_PAD) {
                 me.jumpState = JumpState::JUMP_PAD_JUMP;
+            } else {
+                me.onLadder = false;
+                if (me.jumpState.canJump && me.jumpState.maxTime > -EPS && (move.jump || !me.jumpState.canCancel)) {
+                    me.jumpState.maxTime -= alpha;
+                } else if (me.onGround) {
+                    me.jumpState = JumpState::UNIT_JUMP;
+                } else {
+                    me.jumpState = JumpState::NO_JUMP;
+                }
             }
 
             auto& weapon = me.weapon;
