@@ -116,12 +116,15 @@ bool isPredictionCorrect(int playerId, const World& last, const World& expected,
     return true;
 }
 
+bool finished = false;
 int simulationErrors = 0;
 World lastWorld;
 World expectedWorld;
 UnitAction lastAction;
 
-UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
+UnitAction checkSimulation(int myId, const Game& game, Debug& debug, bool batch, bool visualize) {
+    if (finished) return UnitAction();
+
     auto& me = findUnit(game.world, myId);
     auto nearestEnemy = minBy<Unit>(game.world.units, [&me](const auto& other) {
         return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
@@ -131,52 +134,69 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug) {
     UnitAction ans;
 
     auto tick = game.currentTick;
-    if (tick != 0) {
-        bool ok = isPredictionCorrect(me.playerId, lastWorld, expectedWorld, game.world);
+    bool ok = tick == 0 || isPredictionCorrect(me.playerId, lastWorld, expectedWorld, game.world);
+    if (!ok) simulationErrors++;
+    if (!batch) {
         auto actual = renderWorld(myId, game.world);
-        auto expected = renderWorld(myId, expectedWorld);
         if (!ok) {
             cout << "-> " << lastAction.toString() << endl;
         }
         cout << tick << " " << actual << endl;
         if (!ok) {
+            auto expected = renderWorld(myId, expectedWorld);
             cout << "ERROR! predicted:" << endl << tick << " " << expected << endl;
             if (expected.substr(0, expected.find('\n')) != actual.substr(0, actual.find('\n'))) {
                 cout << surroundingToString(findUnit(game.world, myId).position, game.level);
             } else {
                 cout << endl;
             }
-            simulationErrors++;
         }
-    }
-    if (tick == game.properties.maxTickCount - 1) {
-        cout << "TOTAL ERRORS: " << simulationErrors << endl;
     }
 
     auto world = game.world;
-    debug.log(string("cur: ") + findUnit(world, myId).toString());
-
-    constexpr size_t ticks = 300;
-
-    simulate(myId, game.level, world, *moves, updatesPerTick, 0, ticks, ticks,
-             [myId, ticks, currentTick=game.currentTick, &debug](size_t tick, const World& world) {
-        auto& me = findUnit(world, myId);
-        if (tick > 10 && (tick + currentTick) % 10 == 0) {
-            auto coeff = 1.0f - tick * 1.0f / ticks;
-            drawUnit(me, ColorFloat(0.2f * coeff, 0.2f * coeff, 1.0f * coeff, 1.0), debug);
-        }
-        if (tick > 0 && (tick + currentTick) % 5 == 0) {
-            auto coeff = 1.0f - tick * 1.0f / ticks;
-            for (auto& bullet : world.bullets) {
-                drawBullet(bullet, ColorFloat(0.7f * coeff, 0.2f * coeff, 0.1f * coeff, 0.8), debug);
-            }
-        }
-        if (tick == 0) {
-            debug.log(string("next: ") + me.toString());
-            expectedWorld = world;
-        }
+    simulate(myId, game.level, world, *moves, updatesPerTick, 0, 1, 1, [&](size_t tick, const World& world) {
+        expectedWorld = world;
     });
+
+    if (tick == game.properties.maxTickCount - 1 || findUnit(world, myId).health <= 0) {
+        if (!batch) {
+            cout << "TOTAL ERRORS: ";
+        }
+        if (!finished || !batch) {
+            // In batch mode, simulation finishes if we predict that we're dead on the next turn.
+            // If the prediction turns out to be incorrect, we don't want to output total errors more than once.
+            cout << simulationErrors << endl;
+        }
+        finished = true;
+    }
+
     ans = moves->first();
+
+    if (visualize) {
+        auto w = game.world;
+        debug.log(string("cur: ") + findUnit(w, myId).toString());
+        debug.log(ans.toString());
+
+        constexpr size_t ticks = 300;
+
+        simulate(myId, game.level, w, *moves, updatesPerTick, 0, ticks, ticks, [&](size_t tick, const World& world) {
+            auto& me = findUnit(world, myId);
+            if (tick > 10 && (tick + game.currentTick) % 10 == 0) {
+                auto coeff = 1.0f - tick * 1.0f / ticks;
+                drawUnit(me, ColorFloat(0.2f * coeff, 0.2f * coeff, 1.0f * coeff, 1.0), debug);
+            }
+            if (tick > 0 && (tick + game.currentTick) % 5 == 0) {
+                auto coeff = 1.0f - tick * 1.0f / ticks;
+                for (auto& bullet : world.bullets) {
+                    drawBullet(bullet, ColorFloat(0.7f * coeff, 0.2f * coeff, 0.1f * coeff, 0.8), debug);
+                }
+            }
+            if (tick == 0) {
+                debug.log(string("next: ") + me.toString());
+            }
+        });
+    }
+
     moves->consume();
     lastAction = ans;
     lastWorld = game.world;

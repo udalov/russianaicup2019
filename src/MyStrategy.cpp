@@ -196,6 +196,7 @@ bool visualize = false;
 bool simulation = false;
 bool quick = false;
 bool optimistic = false;
+bool batch = false;
 
 UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& debug) {
     constexpr size_t trackLen = 160;
@@ -211,6 +212,7 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         }
         checkConstants(game.properties);
         simulation = params.find("--simulate") != params.end();
+        batch = params.find("--batch") != params.end();
         visualize = params.find("--vis") != params.end();
         quick = params.find("--quick") != params.end();
         optimistic = params.find("--optimistic") != params.end();
@@ -227,7 +229,7 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         paths = make_unique<Paths>(game.level.tiles);
     }
 
-    if (simulation) return checkSimulation(myId, game, debug);
+    if (simulation) return checkSimulation(myId, game, debug, batch, visualize);
 
     auto& data = datas[me.id != minAllyId];
 
