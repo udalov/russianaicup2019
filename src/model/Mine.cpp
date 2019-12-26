@@ -5,10 +5,10 @@
 using namespace std;
 
 Mine::Mine() { }
-Mine::Mine(int playerId, Vec2Double position, MineState state, optional<double> timer, double triggerRadius) : playerId(playerId), position(position), state(state), timer(timer), triggerRadius(triggerRadius) { }
+Mine::Mine(Vec2Double position, MineState state, optional<double> timer) : position(position), state(state), timer(timer) { }
 Mine Mine::readFrom(InputStream& stream) {
     Mine result;
-    result.playerId = stream.readInt();
+    stream.readInt(); // playerId
     result.position = Vec2Double::readFrom(stream);
     Vec2Double::readFrom(stream); // size
     switch (stream.readInt()) {
@@ -19,11 +19,12 @@ Mine Mine::readFrom(InputStream& stream) {
         default: throw runtime_error("Unexpected discriminant value");
     }
     result.timer = stream.readBool() ? optional<double>(stream.readDouble()) : nullopt;
-    result.triggerRadius = stream.readDouble();
+    stream.readDouble(); // triggerRadius
     ExplosionParams::readFrom(stream);
     return result;
 }
 string Mine::toString() const {
     return string("[M ") + position.toString() + " " +
-        (timer.has_value() ? to_string(*timer) + "s" : "-") + "]";
+        mineStateToString(state) +
+        (timer.has_value() ? " " + ::toString(*timer, 3) + "s" : "") + "]";
 }

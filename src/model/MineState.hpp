@@ -10,4 +10,6 @@ enum MineState {
     EXPLODED = 3
 };
 
+std::string mineStateToString(MineState state);
+
 #endif

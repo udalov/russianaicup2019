@@ -3,8 +3,10 @@
 using namespace std;
 
 string weaponTypeToString(WeaponType type) {
-    return type == WeaponType::PISTOL ? "P"
-        : type == WeaponType::ASSAULT_RIFLE ? "AR"
-        : type == WeaponType::ROCKET_LAUNCHER ? "RL"
-        : "?";
+    switch (type) {
+        case WeaponType::PISTOL: return "P";
+        case WeaponType::ASSAULT_RIFLE: return "AR";
+        case WeaponType::ROCKET_LAUNCHER: return "RL";
+        default: return "?";
+    }
 }

@@ -7,6 +7,10 @@
 constexpr auto jumpPadJumpSpeed = 20.0;
 constexpr auto jumpPadJumpTime = 0.525;
 constexpr auto lootBoxSize = Vec(0.5, 0.5);
+constexpr auto minePrepareTime = 1.0;
+constexpr auto mineSize = Vec(0.5, 0.5);
+constexpr auto mineTriggerRadius = 1.0;
+constexpr auto mineTriggerTime = 0.5;
 constexpr auto ticksPerSecond = 60.0;
 constexpr auto unitFallSpeed = 10.0;
 constexpr auto unitJumpSpeed = 10.0;

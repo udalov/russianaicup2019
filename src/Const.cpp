@@ -16,6 +16,10 @@ void checkConstants(const Properties& properties) {
     check(jumpPadJumpSpeed, properties.jumpPadJumpSpeed);
     check(jumpPadJumpTime, properties.jumpPadJumpTime);
     check(lootBoxSize, properties.lootBoxSize);
+    check(minePrepareTime, properties.minePrepareTime);
+    check(mineSize, properties.mineSize);
+    check(mineTriggerRadius, properties.mineTriggerRadius);
+    check(mineTriggerTime, properties.mineTriggerTime);
     check(ticksPerSecond, properties.ticksPerSecond);
     check(unitFallSpeed, properties.unitFallSpeed);
     check(unitJumpSpeed, properties.unitJumpSpeed);

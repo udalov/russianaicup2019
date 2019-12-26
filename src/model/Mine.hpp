@@ -6,18 +6,21 @@
 #include <string>
 #include "MineState.hpp"
 #include "Vec2D.h"
+#include "../Const.h"
 
 class Mine {
 public:
-    int playerId;
     Vec2Double position;
     MineState state;
     std::optional<double> timer;
-    double triggerRadius;
     Mine();
-    Mine(int playerId, Vec2Double position, MineState state, std::optional<double> timer, double triggerRadius);
+    Mine(Vec2Double position, MineState state, std::optional<double> timer);
     static Mine readFrom(InputStream& stream);
     std::string toString() const;
+
+    constexpr Vec center() const {
+        return position + Vec(0, mineSize.y / 2);
+    }
 };
 
 #endif

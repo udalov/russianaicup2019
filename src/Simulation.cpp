@@ -10,9 +10,11 @@ using namespace std;
 
 constexpr auto EPS = 1e-9;
 
-constexpr auto RL_EXPLOSION_EPS = 0.1;
 constexpr auto ENEMY_BULLET_RL_EPS = 0.05;
 constexpr auto ENEMY_BULLET_OTHER_EPS = 0.01;
+
+constexpr auto RL_EXPLOSION_EPS = 0.1;
+constexpr auto RL_EXPLOSION = ExplosionParams(rocketLauncherParams.explosion->radius + RL_EXPLOSION_EPS, rocketLauncherParams.explosion->damage);
 
 bool isWall(const Level& level, double x, double y) {
     return level(x, y) == Tile::WALL;
@@ -23,10 +25,12 @@ bool isWallOrPlatform(const Level& level, double x, double y, bool jumpDown) {
     return tile == Tile::WALL || (!jumpDown && tile == Tile::PLATFORM);
 }
 
+bool intersects(const Vec& p1, double w1, double h1, const Vec& p2, double w2, double h2) {
+    return 2 * abs(p1.x - p2.x) <= w1 + w2 && 2 * abs(p1.y - p2.y) <= h1 + h2;
+}
+
 bool intersects(const Unit& unit, const Vec& rectCenter, double sizeX, double sizeY) {
-    auto unitCenter = unit.center();
-    return 2 * abs(unitCenter.x - rectCenter.x) <= unitSize.x + sizeX &&
-        2 * abs(unitCenter.y - rectCenter.y) <= unitSize.y + sizeY;
+    return intersects(unit.center(), unitSize.x, unitSize.y, rectCenter, sizeX, sizeY);
 }
 
 bool intersectsLootBox(const Unit& unit, const LootBox& box) {
@@ -40,6 +44,31 @@ bool intersectsBullet(const Unit& unit, const Bullet& bullet, double eps = 0.0) 
 bool intersectsUnit(const Unit& unit, const Unit& other) {
     return abs(unit.position.x - other.position.x) <= unitSize.x &&
         abs(unit.position.y - other.position.y) <= unitSize.y;
+}
+
+bool intersectsExplosion(const Vec& target, const Vec& size, const Vec& center, const ExplosionParams& explosion) {
+    return intersects(target, size.x, size.y, center, explosion.radius * 2, explosion.radius * 2);
+}
+
+bool intersectsMine(const Bullet& bullet, const Mine& mine) {
+    return intersects(bullet.position, bullet.size, bullet.size, mine.center(), mineSize.x, mineSize.y);
+}
+
+void explodeToUnits(World& world, const Vec& position, const ExplosionParams& explosion) {
+    for (auto& unit : world.units) {
+        if (intersectsExplosion(unit.center(), unitSize, position, explosion)) {
+            unit.health -= explosion.damage;
+        }
+    }
+}
+
+void explodeToMines(World& world, const Vec& position, const ExplosionParams& explosion) {
+    for (auto& mine : world.mines) {
+        if (mine.state != MineState::EXPLODED && intersectsExplosion(mine.center(), mineSize, position, explosion)) {
+            mine.state = MineState::EXPLODED;
+            explodeToUnits(world, mine.center(), mineExplosionParams);
+        }
+    }
 }
 
 void simulate(
@@ -63,7 +92,43 @@ void simulate(
         auto& move = track[tick];
         auto vx = min(max(move.velocity, -unitMaxHorizontalSpeed), unitMaxHorizontalSpeed) * alpha;
 
+        if (move.plantMine && me.mines > 0 && me.onGround && !me.onLadder) {
+            me.mines--;
+            world.mines.emplace_back(me.position, MineState::PREPARING, optional<double>(minePrepareTime));
+        }
+
         for (size_t mt = 0; mt < microticks; mt++) {
+            for (size_t i = 0; i < world.mines.size();) {
+                auto& mine = world.mines[i];
+
+                if (mine.state == MineState::IDLE) {
+                    if (any_of(world.units.begin(), world.units.end(), [&mine](const auto& unit) {
+                        constexpr auto sizeX = 2 * mineTriggerRadius + mineSize.x;
+                        constexpr auto sizeY = 2 * mineTriggerRadius + mineSize.y;
+                        return intersects(unit, mine.center(), sizeX, sizeY);
+                    })) {
+                        mine.state = MineState::TRIGGERED;
+                        mine.timer = optional<double>(mineTriggerTime);
+                    }
+                } else if (mine.state == MineState::EXPLODED) {
+                    explodeToMines(world, mine.position, mineExplosionParams);
+                    fastRemove(world.mines, mine);
+                    continue;
+                } else if (mine.timer.has_value()) {
+                    *mine.timer -= alpha;
+                    if (*mine.timer <= 0.0) {
+                        mine.timer = nullopt;
+                        if (mine.state == MineState::PREPARING) {
+                            mine.state = MineState::IDLE;
+                        } else if (mine.state == MineState::TRIGGERED) {
+                            mine.state = MineState::EXPLODED;
+                            explodeToUnits(world, mine.position, mineExplosionParams);
+                        }
+                    }
+                }
+                i++;
+            }
+
             for (size_t i = 0; i < world.bullets.size();) {
                 auto& bullet = world.bullets[i];
 
@@ -76,6 +141,15 @@ void simulate(
                 if (isWall(level, bx - s, by - s) || isWall(level, bx - s, by + s) ||
                     isWall(level, bx + s, by - s) || isWall(level, bx + s, by + s)) {
                     remove = true;
+                }
+
+                for (auto& mine : world.mines) {
+                    if (mine.state != MineState::EXPLODED && intersectsMine(bullet, mine)) {
+                        mine.state = MineState::EXPLODED;
+                        explodeToUnits(world, mine.position, mineExplosionParams);
+                        remove = true;
+                        break;
+                    }
                 }
 
                 auto bulletEps =
@@ -94,13 +168,8 @@ void simulate(
 
                 if (remove) {
                     if (bullet.weaponType == WeaponType::ROCKET_LAUNCHER) {
-                        auto& explosion = rocketLauncherParams.explosion;
-                        auto size = 2 * (explosion->radius + RL_EXPLOSION_EPS);
-                        for (auto& unit : world.units) {
-                            if (intersects(unit, bullet.position, size, size)) {
-                                unit.health -= explosion->damage;
-                            }
-                        }
+                        explodeToUnits(world, bullet.position, RL_EXPLOSION);
+                        explodeToMines(world, bullet.position, RL_EXPLOSION);
                     }
                     fastRemove(world.bullets, bullet);
                 } else i++;

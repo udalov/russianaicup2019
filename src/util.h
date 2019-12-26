@@ -23,6 +23,9 @@ inline const Unit& findUnit(const World& world, int id) {
 
 inline std::string renderWorld(int myId, const World& world) {
     std::string ans = findUnit(world, myId).toString();
+    for (auto& mine : world.mines) {
+        ans += "\n  " + mine.toString();
+    }
     for (auto& bullet : world.bullets) {
         ans += "\n  " + bullet.toString();
     }

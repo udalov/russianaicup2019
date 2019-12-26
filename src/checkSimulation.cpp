@@ -3,6 +3,7 @@
 #include "Const.h"
 #include "Simulation.h"
 #include "util.h"
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -10,32 +11,75 @@
 
 using namespace std;
 
-unique_ptr<Track> getRandomMoveSequence(const Vec &aim) {
-    size_t cp1 = 13;
-    size_t cp2 = 25;
-    size_t cp3 = 186;
-    size_t cp4 = 1000;
-
-    auto ans = make_unique<Track>(cp4);
+struct Moves {
     UnitAction defaultMove;
-    defaultMove.shoot = true;
-    defaultMove.aim = aim;
+    UnitAction right;
+    UnitAction left;
+    UnitAction jump;
+    UnitAction plantMine;
+};
 
-    UnitAction moveRight = defaultMove;
-    moveRight.velocity = 10.0;
-    UnitAction jump = defaultMove;
-    jump.jump = true;
-    UnitAction jumpAndMoveRight = moveRight;
-    jumpAndMoveRight.jump = true;
-    UnitAction left = defaultMove;
-    left.velocity = -10.0;
+Moves createMoves() {
+    Moves ans;
 
-    for (size_t i = 0; i < cp1; i++) (*ans)[i] = moveRight;
-    for (size_t i = cp1; i < cp2; i++) (*ans)[i] = jump;
-    for (size_t i = cp2; i < cp3; i++) (*ans)[i] = jumpAndMoveRight;
-    for (size_t i = cp3; i < cp4; i++) (*ans)[i] = left;
+    ans.defaultMove = UnitAction();
+    ans.defaultMove.shoot = true;
+    ans.defaultMove.aim = Vec(0, -1);
+
+    ans.right = ans.defaultMove;
+    ans.right.velocity = 10.0;
+    ans.left = ans.defaultMove;
+    ans.left.velocity = -10.0;
+
+    ans.jump = ans.defaultMove;
+    ans.jump.jump = true;
+    ans.plantMine = ans.defaultMove;
+    ans.plantMine.plantMine = true;
 
     return ans;
+}
+
+UnitAction operator+(const UnitAction& a1, const UnitAction& a2) {
+    assert(a1.velocity == 0.0 || a2.velocity == 0.0);
+    assert(a1.aim == Vec() || a2.aim == Vec());
+    return UnitAction(
+        a1.velocity + a2.velocity,
+        a1.jump || a2.jump,
+        a1.jumpDown || a2.jumpDown,
+        a1.aim + a2.aim,
+        a1.shoot || a2.shoot,
+        a1.reload || a2.reload,
+        a1.swapWeapon || a2.swapWeapon,
+        a1.plantMine || a2.plantMine
+    );
+}
+
+#define repeat(n) for (size_t i = 0; i < (n); i++)
+
+Track getPredefinedMoveSequence() {
+    static Moves moves = createMoves();
+
+    vector<UnitAction> ans;
+
+    repeat(13) ans.push_back(moves.right);
+    repeat(12) ans.push_back(moves.jump);
+    repeat(161) ans.push_back(moves.jump + moves.right);
+    ans.push_back(moves.left);
+
+    /*
+    // Check mine trigger radius and explosion
+    repeat(100) ans.push_back(moves.right);
+    ans.push_back(moves.plantMine);
+    repeat(10) ans.push_back(moves.right);
+    auto rh = moves.right;
+    rh.velocity = 0.2000001 * rh.velocity;
+    ans.push_back(rh);
+    repeat(60) ans.push_back(moves.defaultMove);
+    repeat(17) ans.push_back(moves.right);
+    ans.push_back(moves.defaultMove);
+    */
+
+    return Track(ans);
 }
 
 void drawRect(Vec corner, Vec size, const ColorFloat& color, Debug& debug) {
@@ -86,6 +130,11 @@ bool isPredictionCorrect(int playerId, const World& last, const World& expected,
         }
 
         if (eu.toString() != au.toString()) return false;
+    }
+
+    if (e.mines.size() != a.mines.size()) return false;
+    for (size_t i = 0; i < e.mines.size(); i++) {
+        if (e.mines[i].toString() != a.mines[i].toString()) return false;
     }
 
     auto probablySame = [](const Bullet& b1, const Bullet& b2) {
@@ -146,21 +195,16 @@ static UnitAction lastAction;
 UnitAction checkSimulation(int myId, const Game& game, Debug& debug, bool batch, bool visualize) {
     if (finished) return UnitAction();
 
-    auto& me = findUnit(game.world, myId);
-    auto nearestEnemy = minBy<Unit>(game.world.units, [&me](const auto& other) {
-        return other.playerId != me.playerId ? me.position.sqrDist(other.position) : 1e100;
-    });
-
-    static auto moves = getRandomMoveSequence( /* nearestEnemy->position - me.position */ Vec(0, -1));
+    static auto moves = getPredefinedMoveSequence();
     UnitAction ans;
 
     auto tick = game.currentTick;
-    bool ok = tick == 0 || isPredictionCorrect(me.playerId, lastWorld, expectedWorld, game.world);
+    bool ok = tick == 0 || isPredictionCorrect(findUnit(game.world, myId).playerId, lastWorld, expectedWorld, game.world);
     if (!ok) simulationErrors++;
     if (!batch) reportPredictionDifference(myId, expectedWorld, game, lastAction, ok, true, tick);
 
     auto world = game.world;
-    simulate(myId, game.level, world, *moves, updatesPerTick, 0, 1, 1, [&](size_t tick, const World& world) {
+    simulate(myId, game.level, world, moves, updatesPerTick, 0, 1, 1, [&](size_t tick, const World& world) {
         expectedWorld = world;
     });
 
@@ -176,7 +220,7 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug, bool batch,
         finished = true;
     }
 
-    ans = moves->first();
+    ans = moves.first();
 
     if (visualize) {
         auto w = game.world;
@@ -185,7 +229,7 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug, bool batch,
 
         constexpr size_t ticks = 300;
 
-        simulate(myId, game.level, w, *moves, updatesPerTick, 0, ticks, ticks, [&](size_t tick, const World& world) {
+        simulate(myId, game.level, w, moves, updatesPerTick, 0, ticks, ticks, [&](size_t tick, const World& world) {
             auto& me = findUnit(world, myId);
             if (tick > 10 && (tick + game.currentTick) % 10 == 0) {
                 auto coeff = 1.0f - tick * 1.0f / ticks;
@@ -203,7 +247,7 @@ UnitAction checkSimulation(int myId, const Game& game, Debug& debug, bool batch,
         });
     }
 
-    moves->consume();
+    moves.consume();
     lastAction = ans;
     lastWorld = game.world;
     return ans;
