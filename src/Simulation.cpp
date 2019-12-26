@@ -71,6 +71,34 @@ void explodeToMines(World& world, const Vec& position, const ExplosionParams& ex
     }
 }
 
+void setBulletFlags(Bullet& bullet, const World& world, const Unit& me, int microticks, double alpha) {
+    constexpr auto bulletMineThresholdSqrDist = 1.5;
+    constexpr auto bulletUnitThresholdSqrDist = 7.5;
+    constexpr auto rocketUnitThresholdSqrDist = 6.0;
+
+    if (microticks <= 2) {
+        bullet.setNeedsMove();
+        bullet.setNearMines();
+        bullet.setNearUnits();
+        return;
+    }
+    if (any_of(world.mines.begin(), world.mines.end(), [&bullet](const auto& mine) {
+        return bullet.position.sqrDist(mine.position) <= bulletMineThresholdSqrDist;
+    })) {
+        bullet.setNearMines();
+    }
+    auto isRocket = bullet.weaponType == WeaponType::ROCKET_LAUNCHER;
+    if ((!isRocket && bullet.position.sqrDist(me.position) <= bulletUnitThresholdSqrDist) ||
+        (isRocket && any_of(world.units.begin(), world.units.end(), [&bullet](const auto& unit) {
+            return bullet.position.sqrDist(unit.position) <= rocketUnitThresholdSqrDist;
+        }))) {
+        bullet.setNearUnits();
+    }
+    if (isRocket || bullet.unitId != me.id || bullet.isNearMines()) {
+        bullet.setNeedsMove();
+    }
+}
+
 void simulate(
     int myId, const Level& level, World& world, const Track& track,
     int defaultMicroticks, size_t highResCutoff, size_t lowResCutoff, size_t ticks,
@@ -96,6 +124,14 @@ void simulate(
             me.mines--;
             world.mines.emplace_back(me.position, MineState::PREPARING, optional<double>(minePrepareTime));
         }
+
+        for (auto& bullet : world.bullets) {
+            setBulletFlags(bullet, world, me, microticks, alpha);
+        }
+        auto amNearUnits = any_of(world.units.begin(), world.units.end(), [&me](const auto& unit) {
+            constexpr auto unitUnitThresholdSqrDist = 5.6;
+            return unit.id != me.id && unit.position.sqrDist(me.position) <= unitUnitThresholdSqrDist;
+        });
 
         for (size_t mt = 0; mt < microticks; mt++) {
             for (size_t i = 0; i < world.mines.size();) {
@@ -131,6 +167,7 @@ void simulate(
 
             for (size_t i = 0; i < world.bullets.size();) {
                 auto& bullet = world.bullets[i];
+                if (!bullet.needsMove()) { i++; continue; }
 
                 bullet.position += bullet.velocity * alpha;
                 auto bx = bullet.position.x;
@@ -143,20 +180,21 @@ void simulate(
                     remove = true;
                 }
 
-                for (auto& mine : world.mines) {
-                    if (mine.state != MineState::EXPLODED && intersectsMine(bullet, mine)) {
-                        mine.state = MineState::EXPLODED;
-                        explodeToUnits(world, mine.position, mineExplosionParams);
-                        remove = true;
-                        break;
+                if (bullet.isNearMines()) {
+                    for (auto& mine : world.mines) {
+                        if (mine.state != MineState::EXPLODED && intersectsMine(bullet, mine)) {
+                            mine.state = MineState::EXPLODED;
+                            explodeToUnits(world, mine.position, mineExplosionParams);
+                            remove = true;
+                            break;
+                        }
                     }
                 }
 
-                auto bulletEps =
-                    bullet.playerId == me.playerId ? 0 :
-                    bullet.weaponType == WeaponType::ROCKET_LAUNCHER ? ENEMY_BULLET_RL_EPS : ENEMY_BULLET_OTHER_EPS;
-                if (!remove) {
-                    // TODO: optimize
+                if (!remove && bullet.isNearUnits()) {
+                    auto bulletEps =
+                        bullet.playerId == me.playerId ? 0 :
+                        bullet.weaponType == WeaponType::ROCKET_LAUNCHER ? ENEMY_BULLET_RL_EPS : ENEMY_BULLET_OTHER_EPS;
                     for (auto& unit : world.units) {
                         if (unit.id != bullet.unitId && intersectsBullet(unit, bullet, bulletEps)) {
                             unit.health -= bullet.damage;
@@ -182,6 +220,7 @@ void simulate(
                     auto& bp = wp.bullet;
                     auto aim = move.aim;
                     world.bullets.emplace_back(weapon->type, me.id, me.playerId, me.center(), aim.normalize() * bp.speed, bp.damage, bp.size);
+                    setBulletFlags(world.bullets.back(), world, me, microticks - mt, alpha);
                     if (--weapon->magazine == 0) {
                         weapon->magazine = wp.magazineSize;
                         weapon->fireTimer = wp.reloadTime;
@@ -224,7 +263,7 @@ void simulate(
             } else {
                 x += vx;
 
-                for (auto& unit : world.units) {
+                if (amNearUnits) for (auto& unit : world.units) {
                     if (unit.id != me.id && intersectsUnit(me, unit)) { x -= vx; break; }
                 }
             }
@@ -252,7 +291,7 @@ void simulate(
                 y += vy;
                 me.onGround = false;
 
-                for (auto& unit : world.units) {
+                if (amNearUnits) for (auto& unit : world.units) {
                     if (unit.id != me.id && intersectsUnit(me, unit)) { y -= vy; break; }
                 }
             }

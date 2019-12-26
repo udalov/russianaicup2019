@@ -6,7 +6,7 @@
 using namespace std;
 
 Bullet::Bullet() { }
-Bullet::Bullet(WeaponType weaponType, int unitId, int playerId, Vec2Double position, Vec2Double velocity, int damage, double size) : weaponType(weaponType), unitId(unitId), playerId(playerId), position(position), velocity(velocity), damage(damage), size(size) { }
+Bullet::Bullet(WeaponType weaponType, int unitId, int playerId, Vec2Double position, Vec2Double velocity, int damage, double size) : weaponType(weaponType), unitId(unitId), playerId(playerId), position(position), velocity(velocity), damage(damage), size(size), flags() { }
 Bullet Bullet::readFrom(InputStream& stream) {
     Bullet result;
     switch (stream.readInt()) {
@@ -22,6 +22,7 @@ Bullet Bullet::readFrom(InputStream& stream) {
     result.damage = stream.readInt();
     result.size = stream.readDouble();
     if (stream.readBool()) ExplosionParams::readFrom(stream);
+    result.flags = 0;
     return result;
 }
 string Bullet::toString() const {
