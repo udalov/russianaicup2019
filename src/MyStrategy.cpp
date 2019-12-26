@@ -182,6 +182,153 @@ bool needToShoot(const Unit& me, const Game& game, Track track, Vec& aim) {
     return actualHealthScore >= expectedHealthScore;
 }
 
+struct WallSegment {
+    size_t x1, y1, x2, y2;
+
+    WallSegment(size_t x1, size_t y1, size_t x2, size_t y2) : x1(x1), y1(y1), x2(x2), y2(y2) {}
+};
+
+void drawRect(Debug& debug, double x1, double y1, double x2, double y2) {
+    auto r = (100 + randomInt() % 100) / 255.0;
+    auto g = (100 + randomInt() % 100) / 255.0;
+    auto b = (100 + randomInt() % 100) / 255.0;
+    debug.draw(CustomData::Rect(Vec(x1, y1), Vec(x2 - x1, y2 - y1), ColorFloat(r, g, b, 1.0)));
+}
+
+void drawSegment(Debug& debug, const WallSegment& segment) {
+    auto dx = segment.x1 == segment.x2 ? 0.1 : 0.0;
+    auto dy = segment.y1 == segment.y2 ? 0.1 : 0.0;
+    drawRect(debug, segment.x1 - dx, segment.y1 - dy, segment.x2 + dx, segment.y2 + dy);
+}
+
+vector<WallSegment> getWallSegments(const Level& level, Debug& debug) {
+    vector<WallSegment> ans;
+
+    auto& tiles = level.tiles;
+    auto n = tiles.size(), m = tiles.front().size();
+    constexpr auto W = Tile::WALL;
+    for (size_t i = 0; i < n - 1; i++) {
+        for (size_t j = 0; j < m; j++) {
+            size_t k = j;
+            while (k < m && (tiles[i][k] == W) != (tiles[i + 1][k] == W)) k++;
+            if (k > j) {
+                ans.emplace_back(i + 1, j, i + 1, k);
+                j = k;
+            }
+        }
+    }
+    for (size_t j = 0; j < m - 1; j++) {
+        for (size_t i = 0; i < n; i++) {
+            size_t k = i;
+            while (k < n && (tiles[k][j] == W) != (tiles[k][j + 1] == W)) k++;
+            if (k > i) {
+                ans.emplace_back(i, j + 1, k, j + 1);
+                i = k;
+            }
+        }
+    }
+
+    /*
+    cerr << ans.size() << " wall segments" << endl;
+    for (auto& segment : ans) {
+        drawSegment(debug, segment);
+    }
+    */
+
+    return ans;
+}
+
+Vec rotate(const Vec& v, double a) {
+    auto cosA = cos(a);
+    auto sinA = sin(a);
+    return Vec(cosA * v.x - sinA * v.y, sinA * v.x + cosA * v.y);
+}
+
+constexpr auto PP = 2 * M_PI;
+
+/*
+double getAngle(const Vec& v, double increment = 0.0) {
+    auto angle = atan2(v.y, v.x) + increment;
+    return angle < 0.0 ? angle + PP : angle >= PP ? angle - PP : angle;
+}
+*/
+
+double angleDiff(double a, double b) {
+    return min(abs(a - b), min(abs(a - b - PP), abs(a - b + PP)));
+}
+
+void drawRay(Debug& debug, const Vec& start, const Vec& direction, const ColorFloat& color) {
+    debug.draw(CustomData::Line(start, start + direction.normalize() * 30.0, 0.05, color));
+}
+
+bool intersectSegments(const WallSegment& s, const Vec& p1, const Vec& p2) {
+    if (s.x1 == s.x2) {
+        auto x = s.x1;
+        if ((p1.x < x) == (p2.x < x)) return false;
+        if (abs(p1.x - p2.x) < 1e-4) return false;
+        auto y = p1.y + (p2.y-p1.y)*(x-p1.x)/(p2.x-p1.x);
+        return s.y1 <= y && y <= s.y2;
+    } else if (s.y1 == s.y2) {
+        auto y = s.y1;
+        if ((p1.y < y) == (p2.y < y)) return false;
+        if (abs(p1.y - p2.y) < 1e-4) return false;
+        auto x = p1.x + (p2.x-p1.x)*(y-p1.y)/(p2.y-p1.y);
+        return s.x1 <= x && x <= s.x2;
+    } else {
+        return false;
+    }
+}
+
+Vec adjustAimIfNeeded(const Unit& me, const Vec& aim, const vector<WallSegment>& segments, Debug& debug) {
+    if (!me.weapon.has_value()) return aim;
+    if (me.weapon->type != WeaponType::ROCKET_LAUNCHER) return aim;
+
+    auto pos = me.center();
+    auto& wp = me.weapon->params;
+    auto shootTicks = (size_t) ceil(me.weapon->fireTimer * ticksPerSecond);
+    auto spreadBase = me.weapon->spread - shootTicks * wp.aimSpeed / ticksPerSecond;
+
+    auto lastAngle = me.weapon->lastAngle.has_value() ? *me.weapon->lastAngle : M_PI;
+    // drawRay(debug, pos, Vec(cos(lastAngle), sin(lastAngle)), ColorFloat(0.5,0.4,0.3,1.0));
+
+    constexpr auto lengthThreshold = 4.0;
+    constexpr static auto squareCorners = array<Vec, 4> { Vec(1,1), Vec(-1,1), Vec(-1,-1), Vec(1,-1) };
+
+    auto ans = aim;
+    auto best = 1e100;
+    for (size_t i = 0; i < 100; i++) {
+        auto angle = i == 0 ? lastAngle : (randomInt() % 1000) / 1000.0 * PP;
+        auto newSpread = max(min(spreadBase + angleDiff(lastAngle, angle), wp.maxSpread), wp.minSpread);
+        auto newAim = Vec(cos(angle), sin(angle));
+        // drawRay(debug, pos, newAim, ColorFloat(0.2,0.4,0.7,1.0));
+        auto ok = true;
+        for (auto& squareCorner : squareCorners) {
+            auto p = pos + squareCorner * (wp.bullet.size / 2);
+            for (auto& s : segments) {
+                if (intersectSegments(s, p, p + newAim * lengthThreshold)) {
+                    ok = false; break;
+                }
+                for (double step = newSpread; step > 0; step -= 0.1) {
+                    if (intersectSegments(s, p, p + rotate(newAim, -step) * lengthThreshold) ||
+                        intersectSegments(s, p, p + rotate(newAim, step) * lengthThreshold)) {
+                        ok = false; break;
+                    }
+                }
+                if (!ok) break;
+            }
+            if (!ok) break;
+        }
+        if (!ok) continue;
+        auto cur = angleDiff(atan2(aim.y, aim.x), angle);
+        if (cur < best) {
+            best = cur;
+            ans = newAim;
+        }
+    }
+
+    return ans;
+}
+
 struct AllyData {
     vector<Track> savedTracks;
 
@@ -236,6 +383,8 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
     }
 
     if (checkSimulationOnPredefinedMoveSequence) return checkSimulation(myId, game, debug, batch, visualize);
+
+    static auto wallSegments = getWallSegments(game.level, debug);
 
     auto& data = datas[me.id != minAllyId];
 
@@ -301,7 +450,7 @@ UnitAction MyStrategy::getAction(const Unit& myUnit, const Game& game, Debug& de
         );
     }
 
-    auto aim = nearestEnemy->position - me.position;
+    auto aim = adjustAimIfNeeded(me, nearestEnemy->position - me.position, wallSegments, debug);
     auto shoot = needToShoot(me, game, bestTrack, aim);
     auto ans = bestTrack.first();
     ans.aim = aim;
